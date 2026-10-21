@@ -1,4 +1,4 @@
-# big12-board
+# NCAA-Stats: Big 12 records board
 
 Every sport, all 16 Big 12 schools: win-loss records, meet finishes, this week's schedule and a department scorecard.
 

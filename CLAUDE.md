@@ -1,4 +1,4 @@
-# big12-board — notes for Claude
+# NCAA-Stats (big12-board Worker) — notes for Claude
 
 Alex directs from his phone; Claude builds. Deploys go through GitHub Actions with an approval gate on the `production` environment. Don't deploy any other way unless Alex asks.
 

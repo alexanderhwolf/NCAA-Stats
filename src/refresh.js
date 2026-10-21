@@ -9,7 +9,7 @@ import { BY_ID } from "./schools.js";
 import { localDate } from "./season.js";
 import { assembleSchool } from "./assemble.js";
 
-export const UA = "Mozilla/5.0 (compatible; Big12RecordsBoard/1.0; +https://github.com/alexanderhwolf/big12-board)";
+export const UA = "Mozilla/5.0 (compatible; Big12RecordsBoard/1.0; +https://github.com/alexanderhwolf/ncaa-stats)";
 
 export function pickDue(sources, rows, now, batch, perHost = 2) {
   const byKey = new Map(rows.map(r => [r.key, r]));
