@@ -157,8 +157,7 @@ ol.fin li { display: grid; grid-template-columns: 64px 1fr auto; gap: 8px; font-
 details.dn { border: 0; background: none; padding: 0; font-size: 12.5px; }
 details.dn summary { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
 details.dn p { margin: 4px 0 0; }
-/* Titles + footer */
-.titles { margin: 0; padding-left: 18px; font-size: 14px; columns: 2 260px; column-gap: 24px; }
+/* Footer */
 details { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; font-size: 13.5px; color: var(--muted); }
 details summary { cursor: pointer; color: var(--fg); font-weight: 600; }
 details ul { margin: 8px 0 0; padding-left: 18px; columns: 2 260px; column-gap: 24px; }
@@ -182,7 +181,7 @@ button:focus-visible, a:focus-visible, tr:focus-visible { outline: 2px solid var
 <main class="wrap">
   <section aria-labelledby="sc-h">
     <h2 class="sec" id="sc-h">Department scorecard <span id="sc-yr" class="yr"></span></h2>
-    <p class="lede"><span id="sc-asof"></span> Combined head-to-head record for sports in season now, plus Big 12 titles won last year, in 2025–26 (regular-season and tournament titles count separately). Football, volleyball and soccer is the fairest comparison; "all confirmed" adds every men's and women's sport with a confirmed record. Common counts only the sports every school has a record in, so it compares like with like. Tap ⓘ to see what counted, or a school to open it.</p>
+    <p class="lede"><span id="sc-asof"></span> Combined head-to-head record for sports in season now. Football, volleyball and soccer is the fairest comparison; "all confirmed" adds every men's and women's sport with a confirmed record. Common counts only the sports every school has a record in, so it compares like with like. Tap ⓘ to see what counted, or a school to open it.</p>
     <div id="scorecard"><div class="msg">Loading data…</div></div>
   </section>
 
@@ -218,7 +217,7 @@ const SCHOOLS = [
 ];
 const BY_ID = Object.fromEntries(SCHOOLS.map(s => [s.id, s]));
 
-const state = { data: {}, titles: null, info: null, sel: null, sortKey: "pct", sortDir: "desc", scope: "core", open: null, gf: "all", sport: "" };
+const state = { data: {}, info: null, sel: null, sortKey: "pct", sortDir: "desc", scope: "core", open: null, gf: "all", sport: "" };
 
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -240,13 +239,10 @@ function recStr(w, l, t) { return `${w}–${l}${t ? "–" + t : ""}`; }
 function pct(w, l, t) { const n = w + l + t; return n ? (w + t / 2) / n : null; }
 const pctStr = B12.fmtPct;
 
-function titlesFor(name) {
-  return (state.titles?.titles || []).filter(t => (t.champions || []).includes(name));
-}
 // Counting rules live in standings.js, shared with the other looks.
 function dept(id, scope) {
   const d = state.data[id];
-  return d ? { ...B12.dept(d, scope || state.scope, Object.values(state.data)), titles: titlesFor(BY_ID[id].name).length } : null;
+  return d ? { ...B12.dept(d, scope || state.scope, Object.values(state.data)) } : null;
 }
 
 function renderScorecard() {
@@ -254,7 +250,7 @@ function renderScorecard() {
   const rows = SCHOOLS.map(s => ({ s, d: dept(s.id) })).filter(r => r.d);
   if (!rows.length) { box.innerHTML = `<div class="msg">No data yet.</div>`; return; }
   const k = state.sortKey, dir = state.sortDir === "desc" ? -1 : 1;
-  const val = r => k === "name" ? r.s.name : k === "wins" ? r.d.w : k === "titles" ? r.d.titles : k === "common" ? (r.d.common ?? -1) : (r.d.pct ?? -1);
+  const val = r => k === "name" ? r.s.name : k === "wins" ? r.d.w : k === "common" ? (r.d.common ?? -1) : (r.d.pct ?? -1);
   rows.sort((a, b) => { const x = val(a), y = val(b); if (x < y) return -1 * dir; if (x > y) return 1 * dir; return a.s.name.localeCompare(b.s.name); });
   const th = (key, label, cls = "") => `<th class="${cls}" scope="col"><button type="button" data-sort="${key}" aria-sort="${k === key ? state.sortDir + "ending" : "none"}">${label}</button></th>`;
   const tog = `<div style="display: flex; align-items: center; gap: 4px; margin-bottom: 10px"><div class="seg" style="margin: 0" role="group" aria-label="Sports counted">
@@ -262,14 +258,13 @@ function renderScorecard() {
     <button type="button" data-scope="all" aria-pressed="${state.scope === "all"}">All confirmed sports</button></div>${info("how", "How the standings are counted")}</div>`;
   const disc = B12.disclaimer(rows, state.scope, esc);
   box.innerHTML = tog + (state.open === "how" ? `<div class="howbox">${B12.HOW}</div>` : "") + `<div class="score-wrap"><table class="score">
-    <thead><tr>${th("name", "School")}${th("wins", "W–L–T", "hide-sm")}${th("pct", "Pct")}${th("common", "Common")}<th scope="col" class="hide-sm" title="Sports counted">Spts</th>${th("titles", "25–26 titles")}</tr></thead>
+    <thead><tr>${th("name", "School")}${th("wins", "W–L–T", "hide-sm")}${th("pct", "Pct")}${th("common", "Common")}<th scope="col" class="hide-sm" title="Sports counted">Spts</th></tr></thead>
     <tbody>${rows.map((r, i) => `<tr tabindex="0" data-id="${r.s.id}" class="${state.sel === r.s.id ? "sel" : ""}" style="--row-sc:${r.s.bg}">
       <td><span class="rank">${i + 1}</span><span class="sw" style="background:${r.s.bg}"></span>${esc(r.s.name)}${state.scope === "core" && r.d.missing.length ? `<span class="dag" title="Not an equal comparison">†</span>` : ""}${info(r.s.id, "What counts for " + r.s.name)}</td>
       <td class="wl hide-sm">${recStr(r.d.w, r.d.l, r.d.t)}</td>
       <td>${pctStr(r.d.pct)}</td>
       <td>${pctStr(r.d.common)}</td>
-      <td class="hide-sm">${r.d.n}</td>
-      <td>${r.d.titles}</td></tr>${state.open === r.s.id ? `<tr class="exp"><td colspan="6">${B12.breakdown(r.d, esc)}</td></tr>` : ""}`).join("")}</tbody></table></div>
+      <td class="hide-sm">${r.d.n}</td></tr>${state.open === r.s.id ? `<tr class="exp"><td colspan="5">${B12.breakdown(r.d, esc)}</td></tr>` : ""}`).join("")}</tbody></table></div>
     ${disc ? `<p class="disc">${disc}</p>` : ""}`;
 }
 
@@ -336,7 +331,6 @@ function renderSchool() {
   if (!d) { box.innerHTML = s ? `<div class="msg">No data for ${esc(s.name)} yet.</div>` : ""; return; }
   box.style.setProperty("--sc", s.bg); box.style.setProperty("--sc-ink", s.ink);
   const dp = dept(s.id, "all");
-  const tl = titlesFor(s.name);
   const t0 = todayCT(), range = `${fmtDow(t0)} – ${fmtDow(plusDays(t0, 6))}`;
   const week = (d.week || []).slice().sort((a, b) => (a.date || "").localeCompare(b.date || ""));
   const weekHtml = week.length ? `<div class="week">${week.map(e => {
@@ -364,11 +358,10 @@ function renderSchool() {
 
   box.innerHTML = `
     <div class="band"><div><h2>${esc(d.school)} ${esc(d.nickname || "")}</h2></div>
-      <div class="facts"><span><b>${recStr(dp.w, dp.l, dp.t)}</b>${esc(seasonLabel())} so far</span><span><b>${pctStr(dp.pct)}</b>pct</span><span><b>${dp.titles}</b>Big 12 titles 25–26</span></div></div>
+      <div class="facts"><span><b>${recStr(dp.w, dp.l, dp.t)}</b>${esc(seasonLabel())} so far</span><span><b>${pctStr(dp.pct)}</b>pct</span></div></div>
     <div><h2 class="sec">This week</h2><p class="lede">${esc(range)}, every sport.</p>${weekHtml}</div>
     ${filters}
     <div id="tiles"></div>
-    ${tl.length ? `<div><h2 class="sec">2025–26 Big 12 titles</h2><ul class="titles">${tl.map(t => `<li>${esc(t.g === "Coed" ? "" : t.g + "'s ")}${esc(t.sport)} · ${esc(t.type)}${t.champions.length > 1 ? " (shared)" : ""}</li>`).join("")}</ul></div>` : ""}
     ${unv ? `<details><summary>Not available right now (${(d.unverified || []).length})</summary><ul>${unv}</ul></details>` : ""}
     ${srcs ? `<details><summary>Sources for ${esc(d.school)}</summary><ul>${srcs}</ul></details>` : ""}`;
   renderTiles();
@@ -456,13 +449,9 @@ renderAll();
 
 async function load() {
   try {
-    const [a, t] = await Promise.all([
-      fetch("/api/schools", { cache: "no-cache" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
-      fetch("/titles.json").then(r => r.ok ? r.json() : null).catch(() => null)
-    ]);
+    const a = await fetch("/api/schools", { cache: "no-cache" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
     state.data = Object.fromEntries(a.schools.map(s => [s.id, s]));
     state.info = { asOf: a.asOf };
-    state.titles = t;
     renderAll();
   } catch (e) {
     if (!Object.keys(state.data).length) {

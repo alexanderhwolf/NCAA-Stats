@@ -205,7 +205,7 @@ footer.small { font-size: 12px; color: var(--muted); border-top: 1px solid var(-
       <div class="det-h">
         <span class="bubble" aria-hidden="true"><b>1</b>B12</span>
         <h2 id="h-sched">Department schedule</h2>
-        <span class="sub" id="sched-sub">Football + volleyball + soccer · titles 2025–26</span>
+        <span class="sub" id="sched-sub">Football + volleyball + soccer</span>
       </div>
       <div id="sched"><div class="msg">Loading…</div></div>
     </section>
@@ -277,7 +277,7 @@ const SCHOOLS = [
 const BY_ID = Object.fromEntries(SCHOOLS.map(s => [s.id, s]));
 const CODES = { "Football": "FB", "Basketball": "BB", "Volleyball": "VB", "Soccer": "SO", "Baseball": "BSB", "Softball": "SB", "Equestrian": "EQ", "Rifle": "RI", "Swimming & Diving": "SD", "Cross Country": "XC", "Track & Field": "TF", "Golf": "GO", "Tennis": "TN", "Triathlon": "TRI", "Beach Volleyball": "BVB", "Gymnastics": "GY", "Wrestling": "WR", "Lacrosse": "LAX", "Rowing": "RO", "Skiing": "SKI", "Acrobatics & Tumbling": "AT", "Ice Hockey": "IH", "Water Polo": "WP", "Cross Country & Track": "XCT" };
 
-const state = { data: {}, titles: null, asOf: null, sel: null, scope: "core", sortKey: "pct", sortDir: "desc", open: null };
+const state = { data: {}, asOf: null, sel: null, scope: "core", sortKey: "pct", sortDir: "desc", open: null };
 
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -299,11 +299,10 @@ const pctStr = p => p == null ? "—" : p.toFixed(3).replace(/^0/, "");
 const recStr = (w, l, t) => `${w}–${l}${t ? "–" + t : ""}`;
 const CORE = s => (s.g === "Men" && s.name === "Football") || (s.g === "Women" && (s.name === "Volleyball" || s.name === "Soccer"));
 
-function titlesFor(name) { return (state.titles?.titles || []).filter(t => (t.champions || []).includes(name)); }
 function dept(id, scope) {
   const d = state.data[id];
   if (!d) return null;
-  return { ...B12.dept(d, scope, Object.values(state.data)), titles: titlesFor(BY_ID[id].name).length };
+  return B12.dept(d, scope, Object.values(state.data));
 }
 
 function renderIndex() {
@@ -318,10 +317,10 @@ function renderSched() {
   const rows = SCHOOLS.map(s => ({ s, d: dept(s.id, state.scope) })).filter(r => r.d);
   if (!rows.length) { box.innerHTML = `<div class="msg">No records yet. The board fills in within an hour of a fresh deploy.</div>`; return; }
   const k = state.sortKey, dir = state.sortDir === "desc" ? -1 : 1;
-  const val = r => k === "name" ? r.s.name : k === "w" ? r.d.w : k === "titles" ? r.d.titles : k === "common" ? (r.d.common ?? -1) : (r.d.pct ?? -1);
+  const val = r => k === "name" ? r.s.name : k === "w" ? r.d.w : k === "common" ? (r.d.common ?? -1) : (r.d.pct ?? -1);
   rows.sort((a, b) => { const x = val(a), y = val(b); return x < y ? -dir : x > y ? dir : a.s.name.localeCompare(b.s.name); });
   const th = (key, label, cls = "") => `<th scope="col" class="${cls}"><button type="button" data-sort="${key}" aria-sort="${k === key ? state.sortDir + "ending" : "none"}">${label}</button></th>`;
-  document.getElementById("sched-sub").textContent = state.scope === "core" ? "Men's football + women's volleyball + women's soccer · titles 2025–26" : "Every men's and women's sport with a confirmed record · titles 2025–26";
+  document.getElementById("sched-sub").textContent = state.scope === "core" ? "Men's football + women's volleyball + women's soccer" : "Every men's and women's sport with a confirmed record";
   const disc = B12.disclaimer(rows, state.scope, esc);
   box.innerHTML = `
     <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px">
@@ -333,11 +332,11 @@ function renderSched() {
     </div>
     ${state.open === "how" ? `<div class="howbox">${B12.HOW}</div>` : ""}
     <div class="box"><table class="sched">
-      <thead><tr>${th("name", "Mark · school")}${th("w", "W", "hide-sm")}<th scope="col" class="hide-sm" style="padding: 0 8px">L</th><th scope="col" class="hide-sm" style="padding: 0 8px">T</th>${th("pct", "Pct")}${th("common", "Common")}<th scope="col" class="hide-sm" style="padding: 0 8px">Spt</th>${th("titles", "Titles")}</tr></thead>
+      <thead><tr>${th("name", "Mark · school")}${th("w", "W", "hide-sm")}<th scope="col" class="hide-sm" style="padding: 0 8px">L</th><th scope="col" class="hide-sm" style="padding: 0 8px">T</th>${th("pct", "Pct")}${th("common", "Common")}<th scope="col" class="hide-sm" style="padding: 0 8px">Spt</th></tr></thead>
       <tbody>${rows.map((r, i) => `<tr class="${state.sel === r.s.id ? "sel" : ""}">
         <td><span class="nmcell"><button type="button" data-id="${r.s.id}"><span class="mk">D${String(i + 1).padStart(2, "0")}</span>${esc(r.s.name)}</button>${state.scope === "core" && r.d.missing.length ? `<span class="dag" title="Not an equal comparison">†</span>` : ""}${infoBtn(r.s.id, "What counts for " + r.s.name)}</span></td>
-        <td class="hide-sm">${r.d.w}</td><td class="hide-sm">${r.d.l}</td><td class="hide-sm">${r.d.t}</td><td style="font-weight: 500">${pctStr(r.d.pct)}</td><td>${pctStr(r.d.common)}</td><td class="hide-sm">${r.d.n}</td><td>${r.d.titles}</td>
-      </tr>${state.open === r.s.id ? `<tr class="exp"><td colspan="8">${B12.breakdown(r.d, esc)}</td></tr>` : ""}`).join("")}</tbody>
+        <td class="hide-sm">${r.d.w}</td><td class="hide-sm">${r.d.l}</td><td class="hide-sm">${r.d.t}</td><td style="font-weight: 500">${pctStr(r.d.pct)}</td><td>${pctStr(r.d.common)}</td><td class="hide-sm">${r.d.n}</td>
+      </tr>${state.open === r.s.id ? `<tr class="exp"><td colspan="7">${B12.breakdown(r.d, esc)}</td></tr>` : ""}`).join("")}</tbody>
     </table></div>
     ${disc ? `<p class="disc">${disc}</p>` : ""}`;
 }
@@ -412,8 +411,6 @@ function renderSchool() {
     const inN = list.filter(x => x.status === "in").length;
     html += detail("h-" + g, title, `${inN} in season · ${list.length - inN} off-season`, `<div class="cards">${list.map(card).join("")}</div>`, s.short);
   }
-  const tl = titlesFor(s.name);
-  if (tl.length) html += `<details class="misc"><summary>2025–26 Big 12 titles (${tl.length})</summary><ul>${tl.map(t => `<li>${esc((t.g === "Coed" ? "" : t.g + "'s ") + t.sport)} · ${esc(t.type)}${t.champions.length > 1 ? " (shared)" : ""}</li>`).join("")}</ul></details>`;
   if ((d.unverified || []).length) html += `<details class="misc"><summary>Not available right now (${d.unverified.length})</summary><ul>${d.unverified.map(u => `<li>${esc(u)}</li>`).join("")}</ul></details>`;
   const srcs = (d.sports || []).filter(x => x.source);
   if (srcs.length) html += `<details class="misc"><summary>Sources</summary><ul>${srcs.map(x => `<li><a href="${esc(x.source)}" target="_blank" rel="noopener">${esc((x.g === "Coed" ? "" : x.g + "'s ") + x.name)}</a></li>`).join("")}</ul></details>`;
@@ -435,7 +432,7 @@ function renderTitleBlock() {
   document.getElementById("tb-name").textContent = d ? `${d.school} ${d.nickname || ""}` : (s ? s.name : "—");
   document.getElementById("tb-swatch").style.background = s ? s.color : "transparent";
   const dp = d ? dept(s.id, "all") : null;
-  document.getElementById("tb-totals").textContent = dp ? `${recStr(dp.w, dp.l, dp.t)} in season · ${pctStr(dp.pct)} · ${dp.titles} Big 12 title${dp.titles === 1 ? "" : "s"} 25–26` : " ";
+  document.getElementById("tb-totals").textContent = dp ? `${recStr(dp.w, dp.l, dp.t)} in season · ${pctStr(dp.pct)}` : " ";
   document.getElementById("tb-no").textContent = s ? `${s.short}.1` : "—";
   document.getElementById("tb-updated").textContent = a ? "Updated " + ct({ month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(a) + " CT" : " ";
 }
@@ -472,13 +469,9 @@ renderAll();
 
 async function load() {
   try {
-    const [a, t] = await Promise.all([
-      fetch("/api/schools", { cache: "no-cache" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
-      fetch("/titles.json").then(r => r.ok ? r.json() : null).catch(() => null)
-    ]);
+    const a = await fetch("/api/schools", { cache: "no-cache" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
     state.data = Object.fromEntries(a.schools.map(s => [s.id, s]));
     state.asOf = a.asOf;
-    state.titles = t;
     renderAll();
   } catch (e) {
     if (!Object.keys(state.data).length) document.getElementById("sched").innerHTML = `<div class="msg">Couldn't load the records right now. Reload to try again.</div>`;

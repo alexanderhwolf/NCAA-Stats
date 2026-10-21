@@ -57,7 +57,7 @@ h2.sec { margin: 0; font-family: var(--display); font-weight: 500; font-size: 34
 
 ol.stand { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .rowwrap { display: flex; align-items: center; gap: 6px; }
-ol.stand li .rowbtn { flex: 1; min-width: 0; width: 100%; display: grid; grid-template-columns: 30px minmax(110px, 1.1fr) minmax(60px, 2fr) 120px 58px 58px 34px; align-items: center; gap: 12px; min-height: 44px; padding: 4px 10px; border: 0; border-radius: 9px; background: transparent; text-align: left; cursor: pointer; }
+ol.stand li .rowbtn { flex: 1; min-width: 0; width: 100%; display: grid; grid-template-columns: 30px minmax(110px, 1.1fr) minmax(60px, 2fr) 120px 58px 58px; align-items: center; gap: 12px; min-height: 44px; padding: 4px 10px; border: 0; border-radius: 9px; background: transparent; text-align: left; cursor: pointer; }
 ol.stand li .rowbtn:hover { background: #172038; }
 ol.stand li.sel .rowbtn { background: #1d2540; }
 .rk { font-family: var(--display); font-size: 24px; color: var(--muted); }
@@ -83,7 +83,7 @@ li.sel .bar i { background: var(--amber); }
 .bd-h { margin: 4px 0 0; font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--amber); }
 .bd-n { margin: 6px 0 0; color: var(--muted); font-size: 12.5px; }
 .disc { color: var(--fg-2); }
-.stand-head { display: grid; grid-template-columns: 30px minmax(110px, 1.1fr) minmax(60px, 2fr) 120px 58px 58px 34px 30px; gap: 12px; padding: 0 10px 6px; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.stand-head { display: grid; grid-template-columns: 30px minmax(110px, 1.1fr) minmax(60px, 2fr) 120px 58px 58px 30px; gap: 12px; padding: 0 10px 6px; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
 .stand-head button { border: 0; background: none; padding: 0; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; text-align: right; }
 .stand-head .nmh button { text-align: left; }
 .stand-head button[aria-sort="descending"]::after { content: " ▾"; }
@@ -141,8 +141,8 @@ footer.small { font-size: 12px; color: var(--muted); border-top: 1px solid var(-
 .msg { color: var(--muted); padding: 8px 0; }
 
 @media (max-width: 640px) {
-  ol.stand li .rowbtn { grid-template-columns: 22px minmax(0, 1fr) 44px 44px 18px; gap: 8px; padding-left: 4px; padding-right: 4px; }
-  .stand-head { grid-template-columns: 22px minmax(0, 1fr) 44px 44px 18px 26px; gap: 8px; padding-left: 4px; padding-right: 4px; }
+  ol.stand li .rowbtn { grid-template-columns: 22px minmax(0, 1fr) 52px 52px; gap: 8px; padding-left: 4px; padding-right: 4px; }
+  .stand-head { grid-template-columns: 22px minmax(0, 1fr) 52px 52px 26px; gap: 8px; padding-left: 4px; padding-right: 4px; }
   /* Phones: Pct and Common only; each school's ⓘ has the full records. */
   ol.stand .wl, .stand-head .wlh { display: none; }
   .aj { font-size: 21px; }
@@ -176,7 +176,7 @@ footer.small { font-size: 12px; color: var(--muted); border-top: 1px solid var(-
       <div style="display: flex; align-items: center; gap: 8px"><div class="seg" role="group" aria-label="Sports counted" id="seg"></div><span id="seg-info"></span></div>
     </div>
     <div id="stand"><p class="msg">Loading…</p></div>
-    <p class="hint" style="margin: 10px 0 0" id="stand-hint">Football, volleyball and soccer combined. Titles: Big 12, 2025–26.</p>
+    <p class="hint" style="margin: 10px 0 0" id="stand-hint">Football, volleyball and soccer combined.</p>
   </section>
 
   <nav class="pills" aria-label="Choose a school" id="pills"></nav>
@@ -210,7 +210,7 @@ const SCHOOLS = [
   { id: "west-virginia", name: "West Virginia", short: "WVU", color: "#002855" }
 ];
 const BY_ID = Object.fromEntries(SCHOOLS.map(s => [s.id, s]));
-const state = { data: {}, titles: null, asOf: null, sel: null, scope: "core", sortKey: "pct", sortDir: "desc", open: null };
+const state = { data: {}, asOf: null, sel: null, scope: "core", sortKey: "pct", sortDir: "desc", open: null };
 
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -229,11 +229,10 @@ const CORE = s => (s.g === "Men" && s.name === "Football") || (s.g === "Women" &
 // Text color that reads on a school's color.
 const inkOn = hex => { const n = parseInt(hex.slice(1), 16); const c = [n >> 16, (n >> 8) & 255, n & 255].map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] > 0.3 ? "#0a0e1a" : "#ffffff"; };
 
-function titlesFor(name) { return (state.titles?.titles || []).filter(t => (t.champions || []).includes(name)); }
 function dept(id, scope) {
   const d = state.data[id];
   if (!d) return null;
-  return { ...B12.dept(d, scope, Object.values(state.data)), titles: titlesFor(BY_ID[id].name).length };
+  return B12.dept(d, scope, Object.values(state.data));
 }
 
 const infoBtn = (key, label) => `<button type="button" class="info" data-info="${key}" aria-expanded="${state.open === key}" aria-label="${esc(label)}">i</button>`;
@@ -247,25 +246,24 @@ function renderStand() {
   const hint = document.getElementById("stand-hint");
   if (!rows.length) { box.innerHTML = `<p class="msg">No records yet. The board fills in within an hour of a fresh deploy.</p>`; hint.textContent = ""; return; }
   const k = state.sortKey, dir = state.sortDir === "desc" ? -1 : 1;
-  const val = r => k === "name" ? r.s.name : k === "titles" ? r.d.titles : k === "w" ? r.d.w : k === "common" ? (r.d.common ?? -1) : (r.d.pct ?? -1);
+  const val = r => k === "name" ? r.s.name : k === "w" ? r.d.w : k === "common" ? (r.d.common ?? -1) : (r.d.pct ?? -1);
   rows.sort((a, b) => { const x = val(a), y = val(b); return x < y ? -dir : x > y ? dir : a.s.name.localeCompare(b.s.name); });
   const hb = (key, label) => `<button type="button" data-sort="${key}" aria-sort="${k === key ? state.sortDir + "ending" : "none"}">${label}</button>`;
   box.innerHTML = `${state.open === "how" ? `<div class="howbox">${B12.HOW}</div>` : ""}
-    <div class="stand-head"><span aria-hidden="true">#</span><span class="nmh">${hb("name", "School")}</span><span class="bh"></span><span class="wlh" style="text-align:right">${hb("w", "W–L–T")}</span><span style="text-align:right">${hb("pct", "Pct")}</span><span style="text-align:right">${hb("common", "Common")}</span><span style="text-align:right">${hb("titles", "Ttl")}</span><span></span></div>
-    <ol class="stand">${rows.map((r, i) => `<li class="${state.sel === r.s.id ? "sel" : ""}"><div class="rowwrap"><button type="button" class="rowbtn" data-id="${r.s.id}" aria-label="${esc(r.s.name)}: ${recStr(r.d.w, r.d.l, r.d.t)}, pct ${pctStr(r.d.pct)}, adjusted ${pctStr(r.d.common)}, ${r.d.titles} titles">
+    <div class="stand-head"><span aria-hidden="true">#</span><span class="nmh">${hb("name", "School")}</span><span class="bh"></span><span class="wlh" style="text-align:right">${hb("w", "W–L–T")}</span><span style="text-align:right">${hb("pct", "Pct")}</span><span style="text-align:right">${hb("common", "Common")}</span><span></span></div>
+    <ol class="stand">${rows.map((r, i) => `<li class="${state.sel === r.s.id ? "sel" : ""}"><div class="rowwrap"><button type="button" class="rowbtn" data-id="${r.s.id}" aria-label="${esc(r.s.name)}: ${recStr(r.d.w, r.d.l, r.d.t)}, pct ${pctStr(r.d.pct)}, common ${pctStr(r.d.common)}">
       <span class="rk">${i + 1}</span>
       <span class="nm"><i style="background:${r.s.color}"></i><span>${esc(r.s.name)}${state.scope === "core" && r.d.missing.length ? `<span class="dag" title="Not an equal comparison"> †</span>` : ""}</span></span>
       <span class="bar" aria-hidden="true"><i style="width:${Math.round((r.d.pct ?? 0) * 100)}%"></i></span>
       <span class="wl">${recStr(r.d.w, r.d.l, r.d.t)}</span>
       <span class="pc">${pctStr(r.d.pct)}</span>
       <span class="aj">${pctStr(r.d.common)}</span>
-      <span class="tt">${r.d.titles}</span>
     </button>${infoBtn(r.s.id, "What counts for " + r.s.name)}</div>
     ${state.open === r.s.id ? `<div class="exp">${B12.breakdown(r.d, esc)}</div>` : ""}</li>`).join("")}</ol>`;
   const disc = B12.disclaimer(rows, state.scope, esc);
   hint.innerHTML = (state.scope === "core"
-    ? "Men's football, women's volleyball and women's soccer. Titles: Big 12, 2025–26."
-    : "Every men's and women's sport in season with a confirmed record. Titles: Big 12, 2025–26.") + (disc ? `<br><span class="disc">${disc}</span>` : "");
+    ? "Men's football, women's volleyball and women's soccer."
+    : "Every men's and women's sport in season with a confirmed record.") + (disc ? `<br><span class="disc">${disc}</span>` : "");
 }
 
 function renderPills() {
@@ -318,9 +316,7 @@ function renderSchool() {
     const inN = list.filter(x => x.status === "in").length;
     gs += `<section class="gsec" aria-labelledby="h-${g}"><div class="gsec-h"><h2 class="sec" id="h-${g}">${title}</h2><span class="hint">${inN} in season · ${list.length - inN} off-season</span></div><div class="grid">${list.map(tile).join("")}</div></section>`;
   }
-  const tl = titlesFor(s.name);
   const misc = [
-    tl.length ? `<details class="misc"><summary>2025–26 Big 12 titles (${tl.length})</summary><ul>${tl.map(t => `<li>${esc((t.g === "Coed" ? "" : t.g + "'s ") + t.sport)} · ${esc(t.type)}${t.champions.length > 1 ? " (shared)" : ""}</li>`).join("")}</ul></details>` : "",
     (d.unverified || []).length ? `<details class="misc"><summary>Not available right now (${d.unverified.length})</summary><ul>${d.unverified.map(u => `<li>${esc(u)}</li>`).join("")}</ul></details>` : "",
     (d.sports || []).some(x => x.source) ? `<details class="misc"><summary>Sources</summary><ul>${d.sports.filter(x => x.source).map(x => `<li><a href="${esc(x.source)}" target="_blank" rel="noopener">${esc((x.g === "Coed" ? "" : x.g + "'s ") + x.name)}</a></li>`).join("")}</ul></details>` : ""
   ].join("");
@@ -330,7 +326,6 @@ function renderSchool() {
       <div class="stats">
         <p><span class="v">${recStr(dp.w, dp.l, dp.t)}</span><br><span class="k">In season</span></p>
         <p><span class="v">${pctStr(dp.pct)}</span><br><span class="k">Win pct</span></p>
-        <p><span class="v">${dp.titles}</span><br><span class="k">Big 12 titles 25–26</span></p>
       </div>
     </section>
     <section aria-labelledby="h-week"><h3 class="label" id="h-week">This week</h3>${weekHtml}</section>
@@ -374,13 +369,9 @@ renderAll();
 
 async function load() {
   try {
-    const [a, t] = await Promise.all([
-      fetch("/api/schools", { cache: "no-cache" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
-      fetch("/titles.json").then(r => r.ok ? r.json() : null).catch(() => null)
-    ]);
+    const a = await fetch("/api/schools", { cache: "no-cache" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
     state.data = Object.fromEntries(a.schools.map(s => [s.id, s]));
     state.asOf = a.asOf;
-    state.titles = t;
     renderAll();
   } catch (e) {
     if (!Object.keys(state.data).length) document.getElementById("stand").innerHTML = `<p class="msg">Couldn't load the records right now. Reload to try again.</p>`;
