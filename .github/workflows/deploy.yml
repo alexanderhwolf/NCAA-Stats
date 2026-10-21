@@ -1,9 +1,8 @@
 name: Deploy
-# Every push to main runs the tests, then waits for approval on the "production"
-# environment before deploying. Set the approver under Settings → Environments → production.
+# Deploys run only when you start them: Actions → Deploy → Run workflow (works from the GitHub
+# mobile app). That manual start is the approval gate. Tests run first; a failure stops the deploy.
+# (Environment required reviewers would need a public repo or GitHub Enterprise.)
 on:
-  push:
-    branches: [main]
   workflow_dispatch: {}
 concurrency:
   group: deploy
@@ -20,7 +19,6 @@ jobs:
   deploy:
     needs: test
     runs-on: ubuntu-latest
-    environment: production
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

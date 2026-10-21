@@ -21,8 +21,8 @@ Arizona State's site isn't Sidearm, so its layer-2 sports show "not supported ye
 ## Setup (once)
 1. **Cloudflare API token** → GitHub secret `CLOUDFLARE_API_TOKEN` (Settings → Secrets and variables → Actions).
    Create it in the Cloudflare dashboard from the "Edit Cloudflare Workers" template; make sure it includes **D1: Edit**.
-2. **Approval gate** → Settings → Environments → New environment `production` → Required reviewers: you.
-3. Push to `main`. Tests run, then the deploy waits for your approval.
+2. **Deploy** → Actions → Deploy → Run workflow. Tests run first; the deploy only happens when you start it.
+   Every push runs the tests (CI workflow) but never deploys.
 
 The D1 database (`big12-board`, id in `wrangler.jsonc`) and its tables already exist. To re-apply the schema: `npm run schema:remote`.
 

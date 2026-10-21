@@ -1,6 +1,6 @@
 # NCAA-Stats (big12-board Worker) — notes for Claude
 
-Alex directs from his phone; Claude builds. Deploys go through GitHub Actions with an approval gate on the `production` environment. Don't deploy any other way unless Alex asks.
+Alex directs from his phone; Claude builds. Deploys run only when Alex starts the Deploy workflow by hand (Actions → Deploy → Run workflow); that's the approval gate, since environment reviewers aren't available on a private repo without Enterprise. Pushes run tests only. Don't deploy any other way unless Alex asks.
 
 ## Layout
 - `src/index.js` routes: `/api/schools`, `/api/status`, `/probe`, `/api/refresh` + `/api/rebuild` (POST, `x-admin-key`), else static assets.
