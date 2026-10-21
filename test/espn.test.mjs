@@ -33,6 +33,15 @@ test("bad input never throws", () => {
 });
 
 test("urls", () => {
-  assert.equal(espnUrl("womens-soccer", 2628, 2026, 2), "https://site.api.espn.com/apis/site/v2/sports/soccer/usa.ncaa.w.1/teams/2628/schedule?season=2026&seasontype=2");
+  assert.equal(espnUrl("womens-soccer", 20518, 2026, 2), "https://site.api.espn.com/apis/site/v2/sports/soccer/usa.ncaa.w.1/teams/20518/schedule?season=2026");
+  assert.equal(espnUrl("football", 2628, 2026, 3), "https://site.api.espn.com/apis/site/v2/sports/football/college-football/teams/2628/schedule?season=2026&seasontype=3");
   assert.equal(espnUrl("rowing", 1, 2026, 2), null);
+});
+
+test("soccer's league-specific season type counts as regular season", () => {
+  const ev = { date: "2026-10-17T00:00Z", seasonType: { type: 14226 }, competitions: [{ status: { type: { completed: true } },
+    competitors: [{ homeAway: "home", team: { id: "20522", location: "Baylor" }, score: { value: 1 }, winner: true },
+                  { homeAway: "away", team: { id: "20518", location: "TCU" }, score: { value: 0 }, winner: false }] }] };
+  const [e] = parseEspnSchedule({ events: [ev] }, 20518, new Set(["20522"])).events;
+  assert.deepEqual([e.result, e.conf, e.exhibition], ["L 0-1", true, false]);
 });

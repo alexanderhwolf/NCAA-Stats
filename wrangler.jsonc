@@ -8,9 +8,10 @@
   "vars": {
     // Pages fetched per cron run, by layer. The account is on Workers Paid (30 s CPU), so the
     // limit here is politeness, not CPU: at most 1 page per school site per run, interleaved
-    // across schools. Every minute: 540 ESPN + 720 school pages per 3 hours.
+    // across schools. Every minute: 540 ESPN + 360 school pages per 3 hours. School sites
+    // throttle bursts with 403s even at one page per site per run, so keep this low.
     "ESPN_PER_RUN": "3",
-    "SITE_PER_RUN": "4",
+    "SITE_PER_RUN": "2",
     // /probe captures raw responses into the probe table for building parser fixtures.
     // Turn off ("false") once the parsers are verified.
     "PROBE_ENABLED": "true"

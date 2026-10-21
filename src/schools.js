@@ -3,7 +3,9 @@
 //
 // layer "espn": results come from ESPN's site JSON (see src/espn.js).
 // layer "site": results come from the school's own Sidearm text-only schedule page (src/sidearm.js).
-// platform "unsupported": the school site isn't Sidearm, so its "site" sports show as unavailable for now.
+// platform "unsupported": no text-only schedule pages, so its "site" sports show as unavailable for now.
+//   Arizona State isn't Sidearm; BYU, UCF and Cincinnati return 404 for /schedule/text (checked from the
+//   Worker, Oct 21, 2026). Their ESPN sports still load.
 // espnId: ESPN's team id for every ESPN sport except soccer, which has its own id space
 // (espnSoccerW / espnSoccerM). All verified by team name through /probe on Oct 21, 2026.
 // A slug shared by men's and women's entries (key "slug:m" / "slug:w") is one combined page; the parser splits rows by gender markers.
@@ -529,7 +531,7 @@ export const SCHOOLS = [
     "bg": "#002E5D",
     "ink": "#ffffff",
     "domain": "byucougars.com",
-    "platform": "sidearm",
+    "platform": "unsupported",
     "espnId": 252,
     "sports": [
       {
@@ -704,7 +706,7 @@ export const SCHOOLS = [
     "bg": "#000000",
     "ink": "#FFC904",
     "domain": "ucfknights.com",
-    "platform": "sidearm",
+    "platform": "unsupported",
     "espnId": 2116,
     "sports": [
       {
@@ -846,7 +848,7 @@ export const SCHOOLS = [
     "bg": "#C8102E",
     "ink": "#ffffff",
     "domain": "gobearcats.com",
-    "platform": "sidearm",
+    "platform": "unsupported",
     "espnId": 2132,
     "sports": [
       {

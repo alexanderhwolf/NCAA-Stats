@@ -2,7 +2,7 @@
 // Keys are stable across a season; the URL moves when the season rolls over.
 
 import { SCHOOLS, espnTeamId } from "./schools.js";
-import { espnUrl } from "./espn.js";
+import { espnUrl, isSoccer } from "./espn.js";
 import { family, startYear, sidearmSeason, espnSeason } from "./season.js";
 
 export const TTL_CUR_MIN = 180;          // current season: every 3 hours
@@ -21,7 +21,7 @@ export function sourcesFor(today) {
         if (sp.layer === "espn") {
           const teamId = espnTeamId(s, sp.espn);
           if (!teamId) continue;
-          for (const st of [2, 3]) {
+          for (const st of isSoccer(sp.espn) ? [2] : [2, 3]) {
             out.push({
               key: `${s.id}|espn|${sp.espn}|${phase}|${st}`, school: s.id, layer: "espn", ref: sp.espn, phase,
               ttl: phase === "cur" && st === 3 ? TTL_POST_MIN : ttl,

@@ -70,9 +70,9 @@ export async function runBatch(env, now = Date.now()) {
         const parsed = parse(s, await res.text());
         if (s.layer === "site" && !parsed.events.length && !parsed.record.overall) err = "no schedule table found";
         else data = JSON.stringify(parsed);
-      } else if (s.layer === "espn" && (status === 500 || status === 404) && (s.phase === "cur" || s.key.endsWith("|3"))) {
-        // ESPN answers 500 for a season or postseason that doesn't exist yet (baseball 2027
-        // in October). That's "nothing scheduled", not a failure.
+      } else if (s.layer === "espn" && [400, 404, 500].includes(status) && (s.phase === "cur" || s.key.endsWith("|3"))) {
+        // ESPN answers 400 or 500 for a season or postseason that doesn't exist yet (baseball
+        // 2027 in October). That's "nothing scheduled", not a failure.
         data = JSON.stringify({ events: [], label: null, teamName: null, empty: true });
       } else err = `HTTP ${status}`;
     } catch (e) {

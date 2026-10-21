@@ -18,10 +18,15 @@ const PATHS = {
   softball: "baseball/college-softball",
 };
 
+// Soccer numbers its season types per league (14226 for 2026 women's soccer, confirmed
+// Oct 21, 2026), so seasontype=2 returns nothing there: soccer is fetched by season alone.
+export const isSoccer = espnSport => /soccer/.test(espnSport);
+
 export function espnUrl(espnSport, teamId, season, seasontype) {
   const p = PATHS[espnSport];
   if (!p) return null;
-  return `https://site.api.espn.com/apis/site/v2/sports/${p}/teams/${teamId}/schedule?season=${season}&seasontype=${seasontype}`;
+  const base = `https://site.api.espn.com/apis/site/v2/sports/${p}/teams/${teamId}/schedule?season=${season}`;
+  return isSoccer(espnSport) ? base : `${base}&seasontype=${seasontype}`;
 }
 
 const num = v => {
@@ -64,7 +69,10 @@ export function parseEspnSchedule(json, teamId, confIds = new Set()) {
         result = null;
       }
     }
-    const seasonType = ev.seasonType?.type ?? null; // 1 pre, 2 regular, 3 post. TODO(verify) exhibitions
+    // 1 pre, 2 regular, 3 post for most sports; soccer uses league-specific ids (14226),
+    // so "regular" means anything that isn't pre or post.
+    const seasonType = ev.seasonType?.type ?? null;
+    const regular = seasonType !== 1 && seasonType !== 3;
     out.events.push({
       date: when ? localDate(when) : null,
       time: when && (ev.timeValid == null || !!ev.timeValid) ? new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", hour: "numeric", minute: "2-digit" }).format(when) + " CT" : null,
@@ -72,7 +80,7 @@ export function parseEspnSchedule(json, teamId, confIds = new Set()) {
       opp: strip(opp?.team?.location || opp?.team?.shortDisplayName || opp?.team?.displayName || ""),
       result,
       exhibition: seasonType === 1,
-      conf: c.conferenceCompetition === true || (seasonType === 2 && confIds.has(String(opp?.team?.id ?? opp?.id))),
+      conf: c.conferenceCompetition === true || (regular && confIds.has(String(opp?.team?.id ?? opp?.id))),
       oppId: opp ? String(opp.team?.id ?? opp.id ?? "") : null,
       post: seasonType === 3,
       canceled: /cancel|postpon/i.test(st.description || ""),
