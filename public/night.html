@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Win-loss records, meet finishes and this week's schedule for every sport at all 16 Big 12 schools.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0a0e1a">
+<title>Big 12 Records Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Teko:wght@400;500;600&family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+/* "Night Game": stadium-lights dark, amber scoreboard numerals. */
+:root {
+  --bg: #0a0e1a;
+  --head: #0f1424;
+  --surface: #121829;
+  --surface-off: #0f1422;
+  --line: #232b45;
+  --line-2: #2d3656;
+  --fg: #eef1f8;
+  --fg-2: #c9cfe0;
+  --muted: #9aa3bd;
+  --amber: #ffb547;
+  --win: #7ce0b5;
+  --loss: #ff8a7a;
+  --display: "Teko", "Oswald", "Arial Narrow", sans-serif;
+  --body: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+html { color-scheme: dark; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.45; }
+button { font: inherit; color: inherit; }
+a { color: var(--amber); }
+a:hover { color: #ffd08a; }
+:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.wrap { max-width: 1200px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+header.top { background: var(--head); border-top: 4px solid var(--amber); border-bottom: 1px solid var(--line); }
+header.top .wrap { padding-top: 30px; padding-bottom: 24px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 12px 24px; }
+.kicker { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .24em; text-transform: uppercase; color: var(--amber); }
+h1 { margin: 4px 0 0; font-family: var(--display); font-weight: 600; font-size: clamp(56px, 11vw, 92px); line-height: .82; letter-spacing: .01em; text-transform: uppercase; }
+.updated { margin: 0; font-size: 14px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.updated i { width: 8px; height: 8px; border-radius: 50%; background: var(--win); display: inline-block; }
+
+main.wrap { padding-top: 28px; padding-bottom: 56px; display: flex; flex-direction: column; gap: 32px; }
+main.wrap > * { min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; }
+h2.sec { margin: 0; font-family: var(--display); font-weight: 500; font-size: 34px; line-height: 1; letter-spacing: .02em; text-transform: uppercase; }
+.sec-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px 16px; margin-bottom: 14px; }
+.hint { font-size: 13px; color: var(--muted); }
+
+.seg { display: inline-flex; background: var(--bg); border: 1px solid var(--line); border-radius: 99px; padding: 3px; gap: 2px; }
+.seg button { min-height: 36px; padding: 0 14px; border: 0; border-radius: 99px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 700; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--amber); color: var(--bg); }
+
+ol.stand { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+ol.stand li button { width: 100%; display: grid; grid-template-columns: 30px minmax(110px, 1.1fr) minmax(60px, 2fr) 120px 58px 34px; align-items: center; gap: 12px; min-height: 44px; padding: 4px 10px; border: 0; border-radius: 9px; background: transparent; text-align: left; cursor: pointer; }
+ol.stand li button:hover { background: #172038; }
+ol.stand li.sel button { background: #1d2540; }
+.rk { font-family: var(--display); font-size: 24px; color: var(--muted); }
+.nm { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.nm i { width: 10px; height: 10px; border-radius: 50%; flex: none; box-shadow: 0 0 0 1px rgba(255,255,255,.35); }
+.nm span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 4px; background: #4b5677; }
+li.sel .bar i { background: var(--amber); }
+.wl { font-family: var(--display); font-size: 26px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pc { font-family: var(--display); font-size: 26px; text-align: right; color: var(--amber); }
+.tt { font-family: var(--display); font-size: 22px; text-align: right; color: var(--fg-2); }
+.stand-head { display: grid; grid-template-columns: 30px minmax(110px, 1.1fr) minmax(60px, 2fr) 120px 58px 34px; gap: 12px; padding: 0 10px 6px; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.stand-head button { border: 0; background: none; padding: 0; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; text-align: right; }
+.stand-head .nmh button { text-align: left; }
+.stand-head button[aria-sort="descending"]::after { content: " ▾"; }
+.stand-head button[aria-sort="ascending"]::after { content: " ▴"; }
+
+nav.pills { display: flex; flex-wrap: wrap; gap: 8px; }
+nav.pills button { min-height: 44px; padding: 0 16px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); font-family: var(--display); font-size: 21px; letter-spacing: .04em; line-height: 1; padding-top: 3px; cursor: pointer; }
+nav.pills button[aria-pressed="true"] { background: var(--amber); color: var(--bg); border-color: var(--amber); }
+
+.band { border-radius: 16px; padding: 26px 26px 22px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 16px 28px; scroll-margin-top: 12px; }
+.band h2 { margin: 0; font-family: var(--display); font-weight: 600; font-size: clamp(48px, 9vw, 72px); line-height: .85; text-transform: uppercase; }
+.stats { display: flex; flex-wrap: wrap; gap: 26px; }
+.stats p { margin: 0; }
+.stats .v { font-family: var(--display); font-size: 44px; line-height: 1; }
+.stats .k { font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; opacity: .85; }
+
+h3.label { margin: 0 0 10px; font-size: 13px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
+.week { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 6px; scroll-snap-type: x proximity; }
+.ticket { flex: none; width: 176px; scroll-snap-align: start; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+.ticket .d { font-family: var(--display); font-size: 22px; line-height: 1.1; color: var(--amber); text-transform: uppercase; }
+.ticket .s { font-weight: 800; font-size: 14px; }
+.ticket .o { font-size: 13px; color: var(--fg-2); overflow-wrap: anywhere; }
+.ticket .t { font-size: 12px; color: var(--muted); }
+.ticket .t.w { color: var(--win); font-weight: 700; } .ticket .t.l { color: var(--loss); font-weight: 700; }
+.empty { margin: 0; color: var(--muted); font-size: 14px; }
+
+.gsec { display: flex; flex-direction: column; gap: 14px; }
+.gsec-h { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.tile.off { background: var(--surface-off); }
+.tile-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.tile-h h4 { margin: 0; font-size: 15px; font-weight: 800; }
+.chip { font-size: 10.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line-2); border-radius: 99px; padding: 2px 8px; white-space: nowrap; }
+.chip.live { color: var(--win); border-color: #2c5a4a; }
+.rec { margin: 2px 0 0; font-family: var(--display); font-weight: 500; font-size: 68px; line-height: .9; color: var(--amber); font-variant-numeric: tabular-nums; }
+.tile.off .rec { color: var(--fg-2); }
+.rec.none { font-family: var(--body); font-size: 15px; font-weight: 700; line-height: 1.3; color: var(--muted); margin: 6px 0; }
+.sub { margin: 0 0 4px; font-size: 13px; color: var(--fg-2); display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.sub .w { color: var(--win); font-weight: 700; } .sub .l { color: var(--loss); font-weight: 700; }
+.line { margin: 0; font-size: 13px; color: var(--muted); }
+.line b { color: var(--fg); font-weight: 700; margin-right: 4px; }
+ol.fin { list-style: none; margin: 4px 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+ol.fin li { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 8px; font-size: 13px; align-items: baseline; }
+.fin .p { font-family: var(--display); font-size: 21px; line-height: 1; color: var(--fg); }
+.fin .p.top { color: var(--amber); }
+.fin .p.na { font-family: var(--body); font-size: 11px; color: var(--muted); }
+.fin .dt { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.note { margin: 4px 0 0; font-size: 12px; color: var(--muted); border-top: 1px dashed var(--line-2); padding-top: 6px; }
+
+details.misc { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 16px; font-size: 13px; color: var(--fg-2); }
+details.misc summary { cursor: pointer; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; font-size: 12px; color: var(--fg); min-height: 30px; display: flex; align-items: center; }
+details.misc ul { margin: 8px 0 4px; padding-left: 18px; columns: 2 260px; column-gap: 24px; }
+footer.small { font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; }
+.msg { color: var(--muted); padding: 8px 0; }
+
+@media (max-width: 640px) {
+  ol.stand li button, .stand-head { grid-template-columns: 22px minmax(0, 1fr) 82px 46px 22px; gap: 8px; padding-left: 6px; padding-right: 6px; }
+  .bar, .stand-head .bh { display: none; }
+  .wl, .pc { font-size: 21px; }
+  .rk { font-size: 20px; }
+  .nm { font-size: 14px; }
+  .nm span { white-space: normal; line-height: 1.2; }
+  .panel { padding: 16px 12px; }
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .rec { font-size: 60px; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div>
+      <p class="kicker">Big 12 · every sport · 16 schools</p>
+      <h1>Records Board</h1>
+    </div>
+    <p class="updated" id="updated"><i aria-hidden="true"></i><span>Loading…</span></p>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="panel" aria-labelledby="h-stand">
+    <div class="sec-row">
+      <h2 class="sec" id="h-stand">Department standings</h2>
+      <div class="seg" role="group" aria-label="Sports counted" id="seg"></div>
+    </div>
+    <div id="stand"><p class="msg">Loading…</p></div>
+    <p class="hint" style="margin: 10px 0 0" id="stand-hint">Football, volleyball and soccer combined. Titles: Big 12, 2025–26.</p>
+  </section>
+
+  <nav class="pills" aria-label="Choose a school" id="pills"></nav>
+
+  <div id="school" style="display: contents"></div>
+
+  <footer class="small">
+    Unofficial fan board; not affiliated with the Big 12 or any school. Football, basketball, volleyball, soccer, baseball and softball come from ESPN; every other sport comes from the school's own athletics site. Anything that couldn't be loaded is listed under the school, never guessed.
+    <br><a href="/" id="alt-link">See the Drawing Set look</a>
+  </footer>
+</main>
+
+<script>
+const SCHOOLS = [
+  { id: "arizona", name: "Arizona", short: "ARIZ", color: "#0C234B" },
+  { id: "arizona-state", name: "Arizona State", short: "ASU", color: "#8C1D40" },
+  { id: "baylor", name: "Baylor", short: "BAY", color: "#154734" },
+  { id: "byu", name: "BYU", short: "BYU", color: "#002E5D" },
+  { id: "ucf", name: "UCF", short: "UCF", color: "#000000" },
+  { id: "cincinnati", name: "Cincinnati", short: "CIN", color: "#C8102E" },
+  { id: "colorado", name: "Colorado", short: "COLO", color: "#000000" },
+  { id: "houston", name: "Houston", short: "HOU", color: "#C8102E" },
+  { id: "iowa-state", name: "Iowa State", short: "ISU", color: "#9E1B32" },
+  { id: "kansas", name: "Kansas", short: "KU", color: "#0051BA" },
+  { id: "kansas-state", name: "Kansas State", short: "KSU", color: "#512888" },
+  { id: "oklahoma-state", name: "Oklahoma State", short: "OKST", color: "#FF7300" },
+  { id: "tcu", name: "TCU", short: "TCU", color: "#4D1979" },
+  { id: "texas-tech", name: "Texas Tech", short: "TTU", color: "#CC0000" },
+  { id: "utah", name: "Utah", short: "UTAH", color: "#BE0000" },
+  { id: "west-virginia", name: "West Virginia", short: "WVU", color: "#002855" }
+];
+const BY_ID = Object.fromEntries(SCHOOLS.map(s => [s.id, s]));
+const state = { data: {}, titles: null, asOf: null, sel: null, scope: "core", sortKey: "pct", sortDir: "desc" };
+
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const parseD = s => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ""); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; };
+const fmtD = s => { const d = parseD(s); return d ? `${MON[d.getMonth()]} ${d.getDate()}` : ""; };
+const fmtDay = s => { const d = parseD(s); return d ? `${DOW[d.getDay()]} ${d.getDate()}` : ""; };
+const dash = s => String(s ?? "").replace(/-/g, "–");
+const EVENT = /invitational|invite|open\b|classic|championship|challenge|challenger|regional|tournament|shootout|cup\b|\bitf\b|\bm25\b|\bw\d+\b|collegiate/i;
+const vsAt = x => !x ? "" : EVENT.test(x.opp || "") ? (x.opp || "") : `${x.at === "Away" ? "at" : "vs"} ${x.opp || "TBA"}${x.at === "Neutral" ? " (neutral)" : ""}`;
+const fmtTime = t => { const m = /(\d{1,2})(?::(\d{2}))?\s*([ap])\.?\s*m\.?/i.exec(t || ""); return m ? `${+m[1]}:${m[2] || "00"} ${m[3].toUpperCase()}M` : (t || "Time TBA").replace(/\s*C[DS]?T$/, ""); };
+const pct = (w, l, t) => { const n = w + l + t; return n ? (w + t / 2) / n : null; };
+const pctStr = p => p == null ? "—" : p.toFixed(3).replace(/^0/, "");
+const recStr = (w, l, t) => `${w}–${l}${t ? "–" + t : ""}`;
+const CORE = s => (s.g === "Men" && s.name === "Football") || (s.g === "Women" && (s.name === "Volleyball" || s.name === "Soccer"));
+// Text color that reads on a school's color.
+const inkOn = hex => { const n = parseInt(hex.slice(1), 16); const c = [n >> 16, (n >> 8) & 255, n & 255].map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] > 0.3 ? "#0a0e1a" : "#ffffff"; };
+
+function titlesFor(name) { return (state.titles?.titles || []).filter(t => (t.champions || []).includes(name)); }
+function dept(id, scope) {
+  const d = state.data[id];
+  if (!d) return null;
+  let w = 0, l = 0, t = 0, n = 0;
+  for (const s of d.sports || []) {
+    if (scope === "core" && !CORE(s)) continue;
+    if (s.status === "in" && s.kind === "h2h" && Number.isFinite(s.w) && Number.isFinite(s.l)) { w += s.w; l += s.l; t += s.t || 0; n++; }
+  }
+  return { w, l, t, n, pct: pct(w, l, t), titles: titlesFor(BY_ID[id].name).length };
+}
+
+function renderStand() {
+  document.getElementById("seg").innerHTML =
+    `<button type="button" data-scope="core" aria-pressed="${state.scope === "core"}">FB · VB · SOC</button><button type="button" data-scope="all" aria-pressed="${state.scope === "all"}">All sports</button>`;
+  document.getElementById("stand-hint").textContent = state.scope === "core"
+    ? "Football, volleyball and soccer combined, the fair comparison. Titles: Big 12, 2025–26."
+    : "Every in-season sport with a confirmed record; varies with what each school posts. Titles: Big 12, 2025–26.";
+  const rows = SCHOOLS.map(s => ({ s, d: dept(s.id, state.scope) })).filter(r => r.d);
+  const box = document.getElementById("stand");
+  if (!rows.length) { box.innerHTML = `<p class="msg">No records yet. The board fills in within an hour of a fresh deploy.</p>`; return; }
+  const k = state.sortKey, dir = state.sortDir === "desc" ? -1 : 1;
+  const val = r => k === "name" ? r.s.name : k === "titles" ? r.d.titles : k === "w" ? r.d.w : (r.d.pct ?? -1);
+  rows.sort((a, b) => { const x = val(a), y = val(b); return x < y ? -dir : x > y ? dir : a.s.name.localeCompare(b.s.name); });
+  const hb = (key, label) => `<button type="button" data-sort="${key}" aria-sort="${k === key ? state.sortDir + "ending" : "none"}">${label}</button>`;
+  box.innerHTML = `<div class="stand-head"><span aria-hidden="true">#</span><span class="nmh">${hb("name", "School")}</span><span class="bh"></span><span style="text-align:right">${hb("w", "W–L–T")}</span><span style="text-align:right">${hb("pct", "Pct")}</span><span style="text-align:right">${hb("titles", "Ttl")}</span></div>
+    <ol class="stand">${rows.map((r, i) => `<li class="${state.sel === r.s.id ? "sel" : ""}"><button type="button" data-id="${r.s.id}" aria-label="${esc(r.s.name)}: ${recStr(r.d.w, r.d.l, r.d.t)}, ${pctStr(r.d.pct)}, ${r.d.titles} titles">
+      <span class="rk">${i + 1}</span>
+      <span class="nm"><i style="background:${r.s.color}"></i><span>${esc(r.s.name)}</span></span>
+      <span class="bar" aria-hidden="true"><i style="width:${Math.round((r.d.pct ?? 0) * 100)}%"></i></span>
+      <span class="wl">${recStr(r.d.w, r.d.l, r.d.t)}</span>
+      <span class="pc">${pctStr(r.d.pct)}</span>
+      <span class="tt">${r.d.titles}</span>
+    </button></li>`).join("")}</ol>`;
+}
+
+function renderPills() {
+  document.getElementById("pills").innerHTML = SCHOOLS.map(s =>
+    `<button type="button" data-id="${s.id}" aria-pressed="${state.sel === s.id}" title="${esc(s.name)}">${esc(s.short)}</button>`).join("");
+}
+
+function tile(s) {
+  const off = s.status !== "in";
+  const chip = off ? (s.season ? `${s.season} final` : "off-season") : "in season";
+  const head = `<div class="tile-h"><h4>${esc(s.g === "Coed" ? s.name : s.name)}</h4><span class="chip${off ? "" : " live"}">${esc(chip)}</span></div>`;
+  const next = s.next ? `<p class="line"><b>${off ? "Opens" : "Next"}</b>${esc(s.kind === "meet" ? (s.next.opp || "TBA") : vsAt(s.next))}, ${esc(fmtD(s.next.date))}</p>` : "";
+  const note = s.notes ? `<p class="note">${esc(s.notes)}</p>` : "";
+  if (s.kind === "meet") {
+    const fin = s.finishes || [];
+    const list = fin.length ? `<ol class="fin">${fin.map(f => {
+      const top = /^(T-)?(1st|2nd|3rd)\b/i.test(f.place || "");
+      return `<li><span class="p${f.place ? (top ? " top" : "") : " na"}">${esc(f.place || "no place posted")}</span><span>${esc(f.event)}</span><span class="dt">${esc(fmtD(f.date))}</span></li>`;
+    }).join("")}</ol>` : `<p class="rec none">${off ? "Meet sport · no win–loss record" : "No finishes posted yet"}</p>`;
+    return `<article class="tile${off ? " off" : ""}">${head}${list}${next}${note}</article>`;
+  }
+  if (!(Number.isFinite(s.w) && Number.isFinite(s.l))) return `<article class="tile${off ? " off" : ""}">${head}<p class="rec none">Record not available</p>${next}${note}</article>`;
+  const sub = [];
+  if (s.conf) sub.push(`<span>Conf ${esc(dash(s.conf))}</span>`);
+  if (s.streak && !off) sub.push(`<span class="${s.streak[0] === "W" ? "w" : s.streak[0] === "L" ? "l" : ""}">${s.streak[0] === "W" ? "Won" : s.streak[0] === "L" ? "Lost" : "Tied"} ${esc(s.streak.slice(1))}</span>`);
+  const p = pct(s.w, s.l, s.t || 0);
+  if (p != null) sub.push(`<span>${pctStr(p)}</span>`);
+  const last = s.last && !off ? `<p class="line"><b>Last</b>${esc(dash(s.last.result || ""))} ${esc(vsAt(s.last))}, ${esc(fmtD(s.last.date))}</p>` : "";
+  const summary = s.summary ? `<p class="line">${esc(s.summary)}</p>` : "";
+  return `<article class="tile${off ? " off" : ""}">${head}<p class="rec">${recStr(s.w, s.l, s.t || 0)}</p>${sub.length ? `<p class="sub">${sub.join("")}</p>` : ""}${last}${summary}${next}${note}</article>`;
+}
+
+function renderSchool() {
+  const s = BY_ID[state.sel], d = s && state.data[s.id];
+  const box = document.getElementById("school");
+  if (!d) { box.innerHTML = ""; return; }
+  const dp = dept(s.id, "all");
+  const ink = inkOn(s.color);
+  const week = (d.week || []).slice().sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  const isMeet = e => (d.sports || []).some(x => x.name === e.sport && x.g === e.g && x.kind === "meet");
+  const weekHtml = week.length ? `<div class="week">${week.map(e => {
+    const r = e.result || "", rc = /^W\b/.test(r) ? "w" : /^L\b/.test(r) ? "l" : "";
+    return `<div class="ticket"><span class="d">${esc(fmtDay(e.date))}</span><span class="s">${esc((e.g === "Coed" ? "" : e.g + "'s ") + e.sport.toLowerCase())}</span><span class="o">${esc(isMeet(e) ? e.opp : vsAt(e))}</span><span class="t ${rc}">${esc(r ? dash(r) : fmtTime(e.time))}</span></div>`;
+  }).join("")}</div>` : `<p class="empty">Nothing scheduled in the next seven days.</p>`;
+  const order = x => (x.status === "in" ? 0 : 2) + (x.kind === "meet" ? 1 : 0);
+  let gs = "";
+  for (const [g, title] of [["Men", "Men's sports"], ["Women", "Women's sports"], ["Coed", "Coed & combined"]]) {
+    const list = (d.sports || []).filter(x => x.g === g).sort((a, b) => order(a) - order(b) || a.name.localeCompare(b.name));
+    if (!list.length) continue;
+    const inN = list.filter(x => x.status === "in").length;
+    gs += `<section class="gsec" aria-labelledby="h-${g}"><div class="gsec-h"><h2 class="sec" id="h-${g}">${title}</h2><span class="hint">${inN} in season · ${list.length - inN} off-season</span></div><div class="grid">${list.map(tile).join("")}</div></section>`;
+  }
+  const tl = titlesFor(s.name);
+  const misc = [
+    tl.length ? `<details class="misc"><summary>2025–26 Big 12 titles (${tl.length})</summary><ul>${tl.map(t => `<li>${esc((t.g === "Coed" ? "" : t.g + "'s ") + t.sport)} · ${esc(t.type)}${t.champions.length > 1 ? " (shared)" : ""}</li>`).join("")}</ul></details>` : "",
+    (d.unverified || []).length ? `<details class="misc"><summary>Not available right now (${d.unverified.length})</summary><ul>${d.unverified.map(u => `<li>${esc(u)}</li>`).join("")}</ul></details>` : "",
+    (d.sports || []).some(x => x.source) ? `<details class="misc"><summary>Sources</summary><ul>${d.sports.filter(x => x.source).map(x => `<li><a href="${esc(x.source)}" target="_blank" rel="noopener">${esc((x.g === "Coed" ? "" : x.g + "'s ") + x.name)}</a></li>`).join("")}</ul></details>` : ""
+  ].join("");
+  box.innerHTML = `
+    <section class="band" id="band" style="background:${s.color};color:${ink}" aria-labelledby="h-school">
+      <h2 id="h-school">${esc(d.school)} ${esc(d.nickname || "")}</h2>
+      <div class="stats">
+        <p><span class="v">${recStr(dp.w, dp.l, dp.t)}</span><br><span class="k">In season</span></p>
+        <p><span class="v">${pctStr(dp.pct)}</span><br><span class="k">Win pct</span></p>
+        <p><span class="v">${dp.titles}</span><br><span class="k">Big 12 titles 25–26</span></p>
+      </div>
+    </section>
+    <section aria-labelledby="h-week"><h3 class="label" id="h-week">This week</h3>${weekHtml}</section>
+    ${gs}${misc}`;
+}
+
+function renderUpdated() {
+  const el = document.querySelector("#updated span");
+  el.textContent = state.asOf ? "Updated " + new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(state.asOf)) + " CT" : "Waiting for first refresh";
+}
+
+function syncAlt() { const l = document.getElementById("alt-link"); if (l) l.href = l.getAttribute("href").split("#")[0] + "#" + state.sel; }
+function renderAll() { syncAlt(); renderUpdated(); renderStand(); renderPills(); renderSchool(); }
+
+function select(id, scroll) {
+  if (!BY_ID[id]) return;
+  state.sel = id;
+  try { history.replaceState(null, "", "#" + id); } catch (e) {}
+  renderAll();
+  if (scroll) document.getElementById("band")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+document.addEventListener("click", e => {
+  const sc = e.target.closest("[data-scope]");
+  if (sc) { state.scope = sc.dataset.scope; renderStand(); return; }
+  const so = e.target.closest("[data-sort]");
+  if (so) {
+    const k = so.dataset.sort;
+    if (state.sortKey === k) state.sortDir = state.sortDir === "desc" ? "asc" : "desc";
+    else { state.sortKey = k; state.sortDir = k === "name" ? "asc" : "desc"; }
+    renderStand(); return;
+  }
+  const b = e.target.closest("button[data-id]");
+  if (b) select(b.dataset.id, !!b.closest("ol.stand"));
+});
+
+state.sel = BY_ID[location.hash.slice(1)] ? location.hash.slice(1) : "tcu";
+renderAll();
+
+async function load() {
+  try {
+    const [a, t] = await Promise.all([
+      fetch("/api/schools", { cache: "no-cache" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
+      fetch("/titles.json").then(r => r.ok ? r.json() : null).catch(() => null)
+    ]);
+    state.data = Object.fromEntries(a.schools.map(s => [s.id, s]));
+    state.asOf = a.asOf;
+    state.titles = t;
+    renderAll();
+  } catch (e) {
+    if (!Object.keys(state.data).length) document.getElementById("stand").innerHTML = `<p class="msg">Couldn't load the records right now. Reload to try again.</p>`;
+  }
+}
+load();
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") load(); });
+</script>
+</body>
+</html>

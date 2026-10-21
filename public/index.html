@@ -197,6 +197,7 @@ footer.small { font-size: 12px; color: var(--muted); border-top: 1px solid var(-
 
     <footer class="small">
       Unofficial fan board; not affiliated with the Big 12 or any school. Football, basketball, volleyball, soccer, baseball and softball come from ESPN; every other sport comes from the school's own athletics site. Anything that couldn't be loaded is listed under the school, never guessed.
+      <br><a href="/night.html" id="alt-link">See the Night Game look</a>
     </footer>
   </main>
 
@@ -418,7 +419,8 @@ function renderTitleBlock() {
   document.getElementById("tb-updated").textContent = a ? "Updated " + ct({ month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(a) + " CT" : " ";
 }
 
-function renderAll() { renderIndex(); renderSched(); renderSchool(); renderTitleBlock(); }
+function syncAlt() { const l = document.getElementById("alt-link"); if (l) l.href = l.getAttribute("href").split("#")[0] + "#" + state.sel; }
+function renderAll() { syncAlt(); renderIndex(); renderSched(); renderSchool(); renderTitleBlock(); }
 
 function select(id, scroll) {
   if (!BY_ID[id]) return;
