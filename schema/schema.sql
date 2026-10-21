@@ -35,3 +35,13 @@ CREATE TABLE IF NOT EXISTS docs (
   json       TEXT NOT NULL,
   updated_at INTEGER NOT NULL
 );
+
+-- One row per cron run: a start with no finish means the run died (CPU limit or crash).
+-- Pruned to the last 500 runs by the cron.
+CREATE TABLE IF NOT EXISTS runs (
+  id       INTEGER PRIMARY KEY AUTOINCREMENT,
+  started  INTEGER NOT NULL,
+  finished INTEGER,
+  picked   TEXT,
+  error    TEXT
+);

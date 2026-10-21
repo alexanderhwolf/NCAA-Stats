@@ -15,7 +15,10 @@ const PROBE_HOSTS = new Set(["site.api.espn.com", ...SCHOOLS.flatMap(s => [s.dom
 
 async function probe(request, env) {
   if (env.PROBE_ENABLED !== "true") return new Response("Not found", { status: 404 });
-  const u = new URL(request.url).searchParams.get("u");
+  const q = new URL(request.url).searchParams;
+  // b: base64url-encoded target, for URLs whose own query string some clients mangle.
+  let u = q.get("u");
+  if (!u && q.get("b")) { try { u = atob(q.get("b").replace(/-/g, "+").replace(/_/g, "/")); } catch { u = null; } }
   let target;
   try { target = new URL(u); } catch { return json({ error: "bad url" }, { status: 400 }); }
   if (target.protocol !== "https:" || !PROBE_HOSTS.has(target.host)) return json({ error: "host not allowed" }, { status: 403 });
@@ -53,6 +56,7 @@ async function status(env) {
     failing: n(r => r.fail_count > 0),
     byLayer: { espn: n(r => r.layer === "espn" && r.has_data), site: n(r => r.layer === "site" && r.has_data) },
     problems: results.filter(r => r.fail_count > 0).slice(0, 100),
+    runs: (await env.DB.prepare("SELECT id, started, finished, picked, error FROM runs ORDER BY id DESC LIMIT 10").all()).results,
   });
 }
 
@@ -72,6 +76,24 @@ export default {
     return env.ASSETS.fetch(request);
   },
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runBatch(env));
+    // Each run logs a start row first and fills it in at the end, so a run that dies
+    // (CPU limit, exception) shows up as a start with no finish.
+    const started = Date.now();
+    let id = null;
+    try {
+      id = (await env.DB.prepare("INSERT INTO runs (started) VALUES (?1) RETURNING id").bind(started).first())?.id;
+    } catch {}
+    try {
+      const keys = await runBatch(env);
+      if (id) {
+        await env.DB.batch([
+          env.DB.prepare("UPDATE runs SET finished = ?1, picked = ?2 WHERE id = ?3").bind(Date.now(), keys.join(" "), id),
+          env.DB.prepare("DELETE FROM runs WHERE id < ?1").bind(id - 500),
+        ]);
+      }
+    } catch (e) {
+      if (id) await env.DB.prepare("UPDATE runs SET finished = ?1, error = ?2 WHERE id = ?3").bind(Date.now(), String(e?.stack || e).slice(0, 1000), id).run();
+      throw e;
+    }
   },
 };

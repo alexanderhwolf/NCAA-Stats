@@ -33,7 +33,10 @@ const num = v => {
 
 const strip = s => String(s || "").replace(/^(#|No\.\s*)\d+\s+/i, "").trim();
 
-export function parseEspnSchedule(json, teamId) {
+// confIds: ESPN ids of the other conference members. This endpoint doesn't flag conference
+// games (conferenceCompetition is absent, confirmed Oct 21, 2026), so a regular-season game
+// against a member counts as a conference game.
+export function parseEspnSchedule(json, teamId, confIds = new Set()) {
   const out = { events: [], label: null, teamName: null };
   if (!json || typeof json !== "object") return out;
   out.teamName = json.team?.displayName ?? null;
@@ -64,12 +67,13 @@ export function parseEspnSchedule(json, teamId) {
     const seasonType = ev.seasonType?.type ?? null; // 1 pre, 2 regular, 3 post. TODO(verify) exhibitions
     out.events.push({
       date: when ? localDate(when) : null,
-      time: when && ev.timeValid !== false ? new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", hour: "numeric", minute: "2-digit" }).format(when) + " CT" : null,
+      time: when && (ev.timeValid == null || !!ev.timeValid) ? new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", hour: "numeric", minute: "2-digit" }).format(when) + " CT" : null,
       at,
       opp: strip(opp?.team?.location || opp?.team?.shortDisplayName || opp?.team?.displayName || ""),
       result,
       exhibition: seasonType === 1,
-      conf: c.conferenceCompetition === true,
+      conf: c.conferenceCompetition === true || (seasonType === 2 && confIds.has(String(opp?.team?.id ?? opp?.id))),
+      oppId: opp ? String(opp.team?.id ?? opp.id ?? "") : null,
       post: seasonType === 3,
       canceled: /cancel|postpon/i.test(st.description || ""),
       note: c.notes?.[0]?.headline ?? null,

@@ -47,7 +47,7 @@ test("every configured sport has a source, keys are unique", () => {
 
 test("queue: never-fetched first, at most 2 per host", () => {
   const src = sourcesFor(today).filter(s => s.school === "tcu");
-  const pick = pickDue(src, [], Date.now(), 10);
+  const pick = pickDue(src, [], Date.now(), { espn: 5, site: 5 });
   const hosts = pick.map(s => new URL(s.url).host);
   for (const h of new Set(hosts)) assert.ok(hosts.filter(x => x === h).length <= 2);
 });

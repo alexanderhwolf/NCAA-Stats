@@ -3,7 +3,7 @@
 Every sport, all 16 Big 12 schools: win-loss records, meet finishes, this week's schedule and a department scorecard.
 
 One Cloudflare Worker does everything:
-- **Cron (every 2 min)** fetches a few due pages, parses them, stores results in D1, and rebuilds the affected schools' documents.
+- **Cron (every minute)** fetches up to 1 ESPN page and 2 school pages that are due, parses them, stores results in D1, and rebuilds the affected schools' documents.
 - **`GET /api/schools`** returns all 16 school documents (stitched from stored JSON; no parsing per request).
 - **`GET /api/status`** shows queue health: pages with data, failing pages and why.
 - **Static page** (`public/index.html`) renders the board from `/api/schools`.
@@ -14,7 +14,7 @@ One Cloudflare Worker does everything:
 | 1 | Football, basketball, volleyball, soccer, baseball, softball | ESPN site JSON (`site.api.espn.com`), undocumented | `src/espn.js` |
 | 2 | Everything else (equestrian, rifle, golf, swimming, tennis, track...) | The school's Sidearm text-only schedule page | `src/sidearm.js` |
 
-Each page refreshes every 3 hours for the current season and weekly for last season. Failures back off (30 min, 1 h, 2 h ...) and show up in `/api/status`. Never more than 2 requests to one host per run.
+Each page refreshes every 3 hours for the current season and weekly for last season. Failures back off (30 min, 1 h, 2 h ...) and show up in `/api/status`. Never more than 2 requests to one host per run. A run that dies shows in `/api/status` → `runs` as a start with no finish.
 
 Arizona State's site isn't Sidearm, so its layer-2 sports show "not supported yet".
 

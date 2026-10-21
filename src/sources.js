@@ -7,6 +7,7 @@ import { family, startYear, sidearmSeason, espnSeason } from "./season.js";
 
 export const TTL_CUR_MIN = 180;          // current season: every 3 hours
 export const TTL_PREV_MIN = 7 * 24 * 60; // finished season: weekly is plenty
+export const TTL_POST_MIN = 24 * 60;     // current postseason list: daily (TODO: every 3 h during each sport's postseason)
 
 export function sourcesFor(today) {
   const Y = startYear(today);
@@ -20,7 +21,8 @@ export function sourcesFor(today) {
         if (sp.layer === "espn") {
           for (const st of [2, 3]) {
             out.push({
-              key: `${s.id}|espn|${sp.espn}|${phase}|${st}`, school: s.id, layer: "espn", ref: sp.espn, phase, ttl,
+              key: `${s.id}|espn|${sp.espn}|${phase}|${st}`, school: s.id, layer: "espn", ref: sp.espn, phase,
+              ttl: phase === "cur" && st === 3 ? TTL_POST_MIN : ttl,
               url: espnUrl(sp.espn, s.espnId, espnSeason(fam, y), st), Y: y, fam,
             });
           }
@@ -29,7 +31,7 @@ export function sourcesFor(today) {
           seenSlug.add(sp.slug + phase);
           out.push({
             key: `${s.id}|site|${sp.slug}|${phase}`, school: s.id, layer: "site", ref: sp.slug, phase, ttl,
-            url: `https://${s.domain}/sports/${sp.slug}/schedule/${sidearmSeason(fam, y)}/text`, Y: y, fam,
+            url: `https://${s.domain}/sports/${sp.slug}/schedule/text/${sidearmSeason(fam, y)}`, Y: y, fam,
           });
         }
       }

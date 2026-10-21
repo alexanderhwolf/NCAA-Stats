@@ -11,7 +11,11 @@ import { assembleSchool } from "./assemble.js";
 
 export const UA = "Mozilla/5.0 (compatible; Big12RecordsBoard/1.0; +https://github.com/alexanderhwolf/ncaa-stats)";
 
-export function pickDue(sources, rows, now, batch, perHost = 2) {
+// caps: how many pages of each layer one run may take. ESPN schedules are ~350 KB of JSON
+// (~5 ms CPU to parse); school pages are ~1 ms. One ESPN page per run keeps a run well
+// inside the free plan's 10 ms CPU limit.
+export function pickDue(sources, rows, now, caps = { espn: 1, site: 2 }, perHost = 2) {
+  if (typeof caps === "number") caps = { espn: caps, site: caps };
   const byKey = new Map(rows.map(r => [r.key, r]));
   const due = [];
   for (const s of sources) {
@@ -22,21 +26,27 @@ export function pickDue(sources, rows, now, batch, perHost = 2) {
     const wait = r.fail_count ? Math.min(30 * backoff, s.ttl) : s.ttl;
     if (now - r.last_attempt >= wait * 60_000) due.push({ s, at: r.last_attempt });
   }
-  due.sort((a, b) => a.at - b.at || (a.s.phase === "cur" ? -1 : 1));
-  const hosts = new Map();
+  // Oldest first; among equals, current regular season before postseason before last season.
+  const rank = s => (s.phase === "cur" ? 0 : 2) + (s.key.endsWith("|3") ? 1 : 0);
+  due.sort((a, b) => a.at - b.at || rank(a.s) - rank(b.s));
+  const hosts = new Map(), layers = new Map();
   const pick = [];
   for (const { s } of due) {
     const h = new URL(s.url).host;
     if ((hosts.get(h) || 0) >= perHost) continue;
+    if ((layers.get(s.layer) || 0) >= (caps[s.layer] ?? 0)) continue;
     hosts.set(h, (hosts.get(h) || 0) + 1);
+    layers.set(s.layer, (layers.get(s.layer) || 0) + 1);
     pick.push(s);
-    if (pick.length >= batch) break;
+    if (pick.length >= (caps.espn || 0) + (caps.site || 0)) break;
   }
   return pick;
 }
 
+const CONF_IDS = new Set(Object.values(BY_ID).map(s => String(s.espnId)));
+
 export function parse(s, body) {
-  if (s.layer === "espn") return parseEspnSchedule(JSON.parse(body), BY_ID[s.school].espnId);
+  if (s.layer === "espn") return parseEspnSchedule(JSON.parse(body), BY_ID[s.school].espnId, CONF_IDS);
   return parseSidearm(body, { Y: s.Y, isFallBallSport: s.fam === "spring" });
 }
 
@@ -44,8 +54,7 @@ export async function runBatch(env, now = Date.now()) {
   const today = localDate(new Date(now));
   const sources = sourcesFor(today);
   const { results: rows } = await env.DB.prepare("SELECT key, url, last_attempt, fail_count FROM pages").all();
-  const pick = pickDue(sources, rows, now, Number(env.BATCH_SIZE || 4));
-  const stmts = [];
+  const pick = pickDue(sources, rows, now, { espn: Number(env.ESPN_PER_RUN || 1), site: Number(env.SITE_PER_RUN || 2) });
   for (const s of pick) {
     let status = 0, err = null, data = null;
     try {
@@ -59,7 +68,7 @@ export async function runBatch(env, now = Date.now()) {
     } catch (e) {
       err = String(e?.message || e).slice(0, 200);
     }
-    stmts.push(env.DB.prepare(
+    await env.DB.prepare(
       `INSERT INTO pages (key, school, layer, ref, phase, url, ttl_min, last_attempt, last_ok, last_status, last_error, fail_count, data)
        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
        ON CONFLICT(key) DO UPDATE SET
@@ -68,9 +77,8 @@ export async function runBatch(env, now = Date.now()) {
          last_ok = COALESCE(excluded.last_ok, pages.last_ok),
          fail_count = CASE WHEN excluded.data IS NULL THEN pages.fail_count + 1 ELSE 0 END,
          data = CASE WHEN excluded.url <> pages.url THEN excluded.data ELSE COALESCE(excluded.data, pages.data) END`
-    ).bind(s.key, s.school, s.layer, s.ref, s.phase, s.url, s.ttl, now, data ? now : null, status, err, data ? 0 : 1, data));
+    ).bind(s.key, s.school, s.layer, s.ref, s.phase, s.url, s.ttl, now, data ? now : null, status, err, data ? 0 : 1, data).run();
   }
-  if (stmts.length) await env.DB.batch(stmts);
   const touched = [...new Set(pick.map(s => s.school))];
   await rebuildDocs(env, touched, today, now);
   return pick.map(s => s.key);

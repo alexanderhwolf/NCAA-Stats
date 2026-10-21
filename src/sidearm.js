@@ -90,9 +90,14 @@ function genderOf(row) {
 export function parseSidearm(html, { Y, isFallBallSport = false } = {}) {
   const out = { label: null, record: { overall: null, conf: null, streak: null }, events: [] };
   if (!html) return out;
+  // The text page is ~330 KB, almost all of it app scaffolding. The schedule lives in <main>
+  // (about 9 KB); cutting to it first keeps parsing inside the Workers CPU limit.
+  html = String(html);
+  const m0 = html.indexOf("<main"), m1 = html.indexOf("</main>");
+  if (m0 >= 0 && m1 > m0) html = html.slice(m0, m1);
   const t = text(html);
-  const title = String(html).match(/<title>([\s\S]*?)<\/title>/i);
-  out.label = title ? text(title[1]) : null;
+  const h1 = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+  out.label = h1 ? text(h1[1]) : null;
   const tbl = tables(html).find(rows => rows[0] && rows[0].some(h => /opponent/i.test(h)) && rows[0].some(h => /date/i.test(h)));
   // Record lines sit outside the schedule table.
   out.record = recordLines(t.replace(tbl ? tbl.flat().join(" ") : "", " "));
@@ -105,7 +110,7 @@ export function parseSidearm(html, { Y, isFallBallSport = false } = {}) {
     const d = parseDate(get("date"), Y);
     if (!d) continue;
     const rg = genderOf(row);
-    const res = get("res").trim();
+    const res = get("res").trim().replace(/^[-\u2013\u2014]$/, "");
     const opp = get("opp").replace(/^(#|No\.\s*)\d+\s+/i, "").replace(/\s*\*$/, "").trim();
     const mo = Number(d.date.slice(5, 7));
     const exhibition = EXH.test(opp + " " + get("tour") + " " + res) || (isFallBallSport && mo >= 8);
@@ -116,7 +121,7 @@ export function parseSidearm(html, { Y, isFallBallSport = false } = {}) {
       end: d.end,
       time: get("time") || null,
       at: AT(get("at")),
-      opp: opp.replace(/\s*\[?\(?exhibition\)?\]?/i, "").trim(),
+      opp: opp.replace(/\s*[\[(](exh\.?|exhibition)[\])]/i, "").trim(),
       location: get("loc") || null,
       tournament: get("tour") || null,
       result: wl ? `${wl[1].toUpperCase()} ${wl[2].replace(/\s+/g, "")}`.trim() : null,

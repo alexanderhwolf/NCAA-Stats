@@ -6,9 +6,11 @@
   "observability": { "enabled": true },
   "assets": { "directory": "./public", "binding": "ASSETS" },
   "vars": {
-    // Pages fetched per cron run. Small on purpose: keeps each run inside the CPU limit
-    // and spreads requests to school sites. 4 every 2 minutes ≈ 360 fetches per 3 hours.
-    "BATCH_SIZE": "4",
+    // Pages fetched per cron run, by layer. Small on purpose: an ESPN schedule is ~350 KB of
+    // JSON (~5 ms CPU), so one per run stays inside the free plan's 10 ms CPU limit.
+    // Every minute: 180 ESPN + 360 school pages per 3 hours, enough for the full rotation.
+    "ESPN_PER_RUN": "1",
+    "SITE_PER_RUN": "2",
     // /probe captures raw responses into the probe table for building parser fixtures.
     // Turn off ("false") once the parsers are verified.
     "PROBE_ENABLED": "true"
@@ -16,7 +18,7 @@
   "d1_databases": [
     { "binding": "DB", "database_name": "big12-board", "database_id": "552a886b-f91e-4015-bf64-c9cb50ac8de7" }
   ],
-  "triggers": { "crons": ["*/2 * * * *"] }
+  "triggers": { "crons": ["* * * * *"] }
 
   // Optional secret, set with `wrangler secret put ADMIN_KEY`:
   //   ADMIN_KEY  enables POST /api/refresh (x-admin-key header) to run a batch on demand

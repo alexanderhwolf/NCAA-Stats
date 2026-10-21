@@ -8,13 +8,14 @@ Alex directs from his phone; Claude builds. Deploys run only when Alex starts th
 - `src/sources.js` — every fetchable page for today's date. `src/season.js` — season naming (fall / spring / academic).
 - `src/refresh.js` — the cron queue. `src/assemble.js` — school documents in the page's schema.
 - `src/espn.js`, `src/sidearm.js` — parsers. Both must stay non-throwing on unexpected input.
-- D1 tables: `pages` (queue + parsed data), `docs` (assembled per school), `probe` (raw captures).
+- D1 tables: `pages` (queue + parsed data), `docs` (assembled per school), `probe` (raw captures), `runs` (one row per cron run).
+- Sidearm season URLs are `/sports/<slug>/schedule/text/<season>` (season AFTER `text`; `/schedule/<season>/text` is a 404). ESPN team schedules don't flag conference games; a regular-season game vs a Big 12 member counts as conference.
 
 ## Rules
 - Plain JS ESM, no build step. Tests: `node --test`. wrangler pinned at 4.120.0; use `npm run`, not `npx wrangler`.
 - Never guess a number. If a source fails, the sport shows as unavailable and the school's `unverified` list says why.
 - Tests with synthetic fixtures are marked as such. Prefer real captures from `/probe` in `test/fixtures/`.
-- Be polite to school sites: keep `BATCH_SIZE` small and the 2-per-host cap.
+- Be polite to school sites and the CPU limit: keep `ESPN_PER_RUN` / `SITE_PER_RUN` small and the 2-per-host cap. An ESPN schedule is ~350 KB JSON (~5 ms CPU to parse); a school page ~1 ms after trimming to `<main>`.
 - `/probe` only fetches ESPN and the 16 school domains. Turn it off (`PROBE_ENABLED: "false"`) once fixtures are captured.
 
 ## Lessons from the first manual collection (Oct 21, 2026)
