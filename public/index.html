@@ -41,6 +41,7 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(32px, 7vw, 
 .asof { font-family: var(--display); font-size: 15px; letter-spacing: .08em; text-transform: uppercase; border: 1px solid color-mix(in srgb, var(--head-ink) 35%, transparent); padding: 6px 12px; border-radius: 3px; white-space: nowrap; }
 main.wrap { padding-block: 22px 48px; display: grid; gap: 30px; grid-template-columns: minmax(0, 1fr); }
 main.wrap > *, #school > *, .gender-block > * { min-width: 0; }
+.yr { color: var(--muted); font-weight: 600; }
 h2.sec { font-family: var(--display); font-weight: 700; font-size: clamp(24px, 4.5vw, 32px); text-transform: uppercase; letter-spacing: .03em; margin: 0 0 4px; }
 .lede { color: var(--muted); margin: 0 0 12px; max-width: 70ch; font-size: 14px; }
 .msg { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px; color: var(--muted); }
@@ -180,8 +181,8 @@ button:focus-visible, a:focus-visible, tr:focus-visible { outline: 2px solid var
 
 <main class="wrap">
   <section aria-labelledby="sc-h">
-    <h2 class="sec" id="sc-h">Department scorecard</h2>
-    <p class="lede">Combined head-to-head record for sports in season now, plus Big 12 titles won in 2025–26 (regular-season and tournament titles count separately). Football, volleyball and soccer is the fairest comparison; "all confirmed" adds every men's and women's sport with a confirmed record. Common counts only the sports every school has a record in, so it compares like with like. Tap ⓘ to see what counted, or a school to open it.</p>
+    <h2 class="sec" id="sc-h">Department scorecard <span id="sc-yr" class="yr"></span></h2>
+    <p class="lede"><span id="sc-asof"></span> Combined head-to-head record for sports in season now, plus Big 12 titles won last year, in 2025–26 (regular-season and tournament titles count separately). Football, volleyball and soccer is the fairest comparison; "all confirmed" adds every men's and women's sport with a confirmed record. Common counts only the sports every school has a record in, so it compares like with like. Tap ⓘ to see what counted, or a school to open it.</p>
     <div id="scorecard"><div class="msg">Loading data…</div></div>
   </section>
 
@@ -231,6 +232,8 @@ const EVENT = /invitational|invite\b|\bopen\b|classic|championship|challenge|reg
 function oppLine(x) { if (!x) return ""; if (EVENT.test(x.opp || "")) return x.opp; const n = x.at === "Neutral" ? " (neutral)" : ""; return `${vsAt(x.at)} ${x.opp || "TBA"}${n}`; }
 const dash = s => String(s ?? "").replace(/-/g, "–");
 function fmtTime(t) { const m = /(\d{1,2})(?::(\d{2}))?\s*([ap])\.?\s*m\.?/i.exec(t || ""); return m ? `${+m[1]}:${m[2] || "00"} ${m[3].toUpperCase()}M` : (t ? t.replace(/\s*C[DS]?T$/, "") : "Time TBA"); }
+// The academic year the board is showing: fall 2026 sports through spring 2027 = "2026–27".
+function seasonLabel(iso = todayCT()) { const y = +iso.slice(0, 4), m = +iso.slice(5, 7); const s = m >= 7 ? y : y - 1; return `${s}–${String(s + 1).slice(2)}`; }
 function todayCT() { return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago" }).format(new Date()); }
 function plusDays(iso, n) { const d = parseD(iso); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
 function recStr(w, l, t) { return `${w}–${l}${t ? "–" + t : ""}`; }
@@ -259,7 +262,7 @@ function renderScorecard() {
     <button type="button" data-scope="all" aria-pressed="${state.scope === "all"}">All confirmed sports</button></div>${info("how", "How the standings are counted")}</div>`;
   const disc = B12.disclaimer(rows, state.scope, esc);
   box.innerHTML = tog + (state.open === "how" ? `<div class="howbox">${B12.HOW}</div>` : "") + `<div class="score-wrap"><table class="score">
-    <thead><tr>${th("name", "School")}${th("wins", "W–L–T", "hide-sm")}${th("pct", "Pct")}${th("common", "Common")}<th scope="col" class="hide-sm" title="Sports counted">Spts</th>${th("titles", "Titles")}</tr></thead>
+    <thead><tr>${th("name", "School")}${th("wins", "W–L–T", "hide-sm")}${th("pct", "Pct")}${th("common", "Common")}<th scope="col" class="hide-sm" title="Sports counted">Spts</th>${th("titles", "25–26 titles")}</tr></thead>
     <tbody>${rows.map((r, i) => `<tr tabindex="0" data-id="${r.s.id}" class="${state.sel === r.s.id ? "sel" : ""}" style="--row-sc:${r.s.bg}">
       <td><span class="rank">${i + 1}</span><span class="sw" style="background:${r.s.bg}"></span>${esc(r.s.name)}${state.scope === "core" && r.d.missing.length ? `<span class="dag" title="Not an equal comparison">†</span>` : ""}${info(r.s.id, "What counts for " + r.s.name)}</td>
       <td class="wl hide-sm">${recStr(r.d.w, r.d.l, r.d.t)}</td>
@@ -361,7 +364,7 @@ function renderSchool() {
 
   box.innerHTML = `
     <div class="band"><div><h2>${esc(d.school)} ${esc(d.nickname || "")}</h2></div>
-      <div class="facts"><span><b>${recStr(dp.w, dp.l, dp.t)}</b>in season</span><span><b>${pctStr(dp.pct)}</b>pct</span><span><b>${dp.titles}</b>Big 12 titles 25–26</span></div></div>
+      <div class="facts"><span><b>${recStr(dp.w, dp.l, dp.t)}</b>${esc(seasonLabel())} so far</span><span><b>${pctStr(dp.pct)}</b>pct</span><span><b>${dp.titles}</b>Big 12 titles 25–26</span></div></div>
     <div><h2 class="sec">This week</h2><p class="lede">${esc(range)}, every sport.</p>${weekHtml}</div>
     ${filters}
     <div id="tiles"></div>
@@ -405,6 +408,8 @@ function renderAll() {
   document.getElementById("asof").textContent = asof
     ? "Updated · " + new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/Chicago", timeZoneName: "short" }).format(new Date(asof))
     : "No data yet";
+  document.getElementById("sc-yr").textContent = "· " + seasonLabel();
+  document.getElementById("sc-asof").textContent = `${seasonLabel()} season to date, as of ${fmtD(todayCT())}.`;
   renderScorecard(); renderPicker(); renderSchool(); syncAlt();
 }
 function syncAlt() { document.querySelectorAll("a.alt").forEach(a => { a.href = a.getAttribute("href").split("#")[0] + "#" + state.sel; }); }
