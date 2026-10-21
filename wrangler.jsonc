@@ -6,11 +6,11 @@
   "observability": { "enabled": true },
   "assets": { "directory": "./public", "binding": "ASSETS" },
   "vars": {
-    // Pages fetched per cron run, by layer. Small on purpose: an ESPN schedule is ~350 KB of
-    // JSON (~5 ms CPU), so one per run stays inside the free plan's 10 ms CPU limit.
-    // Every minute: 180 ESPN + 360 school pages per 3 hours, enough for the full rotation.
-    "ESPN_PER_RUN": "1",
-    "SITE_PER_RUN": "2",
+    // Pages fetched per cron run, by layer. The account is on Workers Paid (30 s CPU), so the
+    // limit here is politeness, not CPU: at most 1 page per school site per run, interleaved
+    // across schools. Every minute: 540 ESPN + 720 school pages per 3 hours.
+    "ESPN_PER_RUN": "3",
+    "SITE_PER_RUN": "4",
     // /probe captures raw responses into the probe table for building parser fixtures.
     // Turn off ("false") once the parsers are verified.
     "PROBE_ENABLED": "true"

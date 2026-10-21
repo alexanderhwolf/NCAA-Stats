@@ -54,3 +54,15 @@ test("meet places and multi-day ranges", () => {
 test("entities and tags collapse to text", () => {
   assert.equal(text("<b>Texas&nbsp;A&amp;M</b>&#39;s"), "Texas A&M's");
 });
+
+test("golf rounds fold into one event; 'N -' is not a result", () => {
+  const html = `<table><tr><th>Date</th><th>Opponent</th><th>Result</th></tr>
+  <tr><td>Sep 18 (Fri)</td><td>Fighting Illini Invitational</td><td>N -</td></tr>
+  <tr><td>Sep 19 (Sat)</td><td>Fighting Illini Invitational</td><td></td></tr>
+  <tr><td>Sep 20 (Sun)</td><td>Fighting Illini Invitational</td><td>3rd</td></tr>
+  <tr><td>Oct 4 (Sun)</td><td>Trinity Forest Invitational</td><td>N -</td></tr></table>`;
+  const r = parseSidearm(html, { Y: 2026 });
+  assert.equal(r.events.length, 2);
+  assert.deepEqual([r.events[0].date, r.events[0].end, r.events[0].place], ["2026-09-18", "2026-09-20", "3rd"]);
+  assert.equal(r.events[1].raw, null);
+});

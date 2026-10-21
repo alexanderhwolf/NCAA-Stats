@@ -41,7 +41,11 @@ export function summarize(sport, events, recordLine, today) {
   const upcoming = events.filter(e => !e.result && !e.place && (e.end || e.date) >= today && !e.canceled);
   const next = upcoming.find(e => !e.exhibition) || upcoming[0] || null;
   const lastGame = counted[counted.length - 1] || null;
-  const hasResults = sport.kind === "meet" ? finishes.length > 0 || events.some(e => e.raw && (e.end || e.date) < today) : counted.length > 0 || !!recordLine?.overall && (w + l + t) > 0;
+  // A meet sport is under way once a non-exhibition event has finished, posted place or not
+  // (many schools never post golf or cross country placings on the schedule page).
+  const hasResults = sport.kind === "meet"
+    ? finishes.length > 0 || events.some(e => !e.exhibition && (e.end || e.date) < today)
+    : counted.length > 0 || (!!recordLine?.overall && (w + l + t) > 0);
   return { w, l, t, conf, streak, finishes, next, lastGame, hasResults, upcoming };
 }
 
@@ -93,6 +97,12 @@ export function assembleSchool(school, rows, today) {
     const label = sp.g === "Coed" ? sp.name : `${sp.g}'s ${sp.name.toLowerCase()}`;
     const curSeason = sp.layer === "espn" ? String(espnSeason(fam, Y)) : sidearmSeason(fam, Y);
     const prevSeason = sp.layer === "espn" ? String(espnSeason(fam, Y - 1)) : sidearmSeason(fam, Y - 1);
+    // A school page asked for a season it hasn't posted quietly serves its latest one
+    // (gymnastics asked for 2026-27 answers "2025-26 Gymnastics Schedule"). Those rows aren't
+    // this season: keep them out of the record, and leave last season to the prev page.
+    if (sp.layer === "site" && cur?.label && !cur.label.includes(curSeason)) {
+      cur = { ...cur, record: null, events: cur.events.filter(e => (e.end || e.date) >= today).map(e => ({ ...e, exhibition: true })) };
+    }
 
     if (sp.layer === "site" && school.platform !== "sidearm") {
       sports.push({ ...shape(sp, { finishes: [] }, "off", null, null), w: null, l: null, notes: "This school's site isn't supported yet." });

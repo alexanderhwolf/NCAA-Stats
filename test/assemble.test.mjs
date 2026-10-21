@@ -45,9 +45,32 @@ test("every configured sport has a source, keys are unique", () => {
   assert.ok(src.every(s => s.url.startsWith("https://")));
 });
 
-test("queue: never-fetched first, at most 2 per host", () => {
-  const src = sourcesFor(today).filter(s => s.school === "tcu");
-  const pick = pickDue(src, [], Date.now(), { espn: 5, site: 5 });
-  const hosts = pick.map(s => new URL(s.url).host);
-  for (const h of new Set(hosts)) assert.ok(hosts.filter(x => x === h).length <= 2);
+test("queue: layer caps, one page per school site, spread across schools", () => {
+  const src = sourcesFor(today);
+  const pick = pickDue(src, [], Date.now(), { espn: 3, site: 4 });
+  const site = pick.filter(s => s.layer === "site").map(s => new URL(s.url).host);
+  assert.equal(pick.filter(s => s.layer === "espn").length, 3);
+  assert.equal(site.length, 4);
+  assert.equal(new Set(site).size, 4, "never two pages from one school site in a run");
+  assert.ok(new Set(pick.map(s => s.school)).size > 1, "not one school at a time");
+});
+
+test("soccer uses ESPN's soccer team ids", () => {
+  const src = sourcesFor(today).filter(s => s.school === "arizona" && s.ref === "womens-soccer");
+  assert.ok(src.every(s => s.url.includes("/teams/20503/")));
+});
+
+test("a school page serving an older season doesn't count as this season", () => {
+  const sp = BY_ID.arizona.sports.find(s => s.slug === "womens-gymnastics");
+  const school = { ...BY_ID.arizona, sports: [sp] };
+  const stale = { label: "2025-26 Gymnastics Schedule", record: { overall: "13-4" }, events: [ev("2026-02-06", "W 197-195")] };
+  const prev = { label: "2025-26 Gymnastics Schedule", record: { overall: "13-4" }, events: [ev("2026-02-06", "W 197-195")] };
+  const rows = [
+    { key: "arizona|site|womens-gymnastics|cur", url: "c", data: JSON.stringify(stale), last_ok: 1 },
+    { key: "arizona|site|womens-gymnastics|prev", url: "p", data: JSON.stringify(prev), last_ok: 1 },
+  ];
+  const [g] = assembleSchool(school, rows, today).sports;
+  assert.equal(g.status, "off");
+  assert.equal(g.season, "2025-26");
+  assert.deepEqual([g.w, g.l], [13, 4]);
 });

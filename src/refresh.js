@@ -5,16 +5,19 @@
 import { sourcesFor } from "./sources.js";
 import { parseEspnSchedule } from "./espn.js";
 import { parseSidearm } from "./sidearm.js";
-import { BY_ID } from "./schools.js";
+import { BY_ID, SCHOOLS, espnTeamId } from "./schools.js";
 import { localDate } from "./season.js";
 import { assembleSchool } from "./assemble.js";
 
 export const UA = "Mozilla/5.0 (compatible; Big12RecordsBoard/1.0; +https://github.com/alexanderhwolf/ncaa-stats)";
 
-// caps: how many pages of each layer one run may take. ESPN schedules are ~350 KB of JSON
-// (~5 ms CPU to parse); school pages are ~1 ms. One ESPN page per run keeps a run well
-// inside the free plan's 10 ms CPU limit.
-export function pickDue(sources, rows, now, caps = { espn: 1, site: 2 }, perHost = 2) {
+// caps: how many pages of each layer one run may take (ESPN_PER_RUN / SITE_PER_RUN).
+// An ESPN schedule is ~350 KB of JSON (~5 ms CPU); a school page ~1 ms.
+// Small stable hash, so equal-priority pages interleave across schools instead of
+// walking one school's site page after page (Arizona answered 403 to that).
+const h32 = str => { let h = 2166136261; for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619); return h >>> 0; };
+
+export function pickDue(sources, rows, now, caps = { espn: 1, site: 2 }, perHost = 1) {
   if (typeof caps === "number") caps = { espn: caps, site: caps };
   const byKey = new Map(rows.map(r => [r.key, r]));
   const due = [];
@@ -28,12 +31,13 @@ export function pickDue(sources, rows, now, caps = { espn: 1, site: 2 }, perHost
   }
   // Oldest first; among equals, current regular season before postseason before last season.
   const rank = s => (s.phase === "cur" ? 0 : 2) + (s.key.endsWith("|3") ? 1 : 0);
-  due.sort((a, b) => a.at - b.at || rank(a.s) - rank(b.s));
+  due.sort((a, b) => a.at - b.at || rank(a.s) - rank(b.s) || h32(a.s.key) - h32(b.s.key));
   const hosts = new Map(), layers = new Map();
   const pick = [];
   for (const { s } of due) {
     const h = new URL(s.url).host;
-    if ((hosts.get(h) || 0) >= perHost) continue;
+    // ESPN is one big API host; the per-host cap is for school sites.
+    if (s.layer === "site" && (hosts.get(h) || 0) >= perHost) continue;
     if ((layers.get(s.layer) || 0) >= (caps[s.layer] ?? 0)) continue;
     hosts.set(h, (hosts.get(h) || 0) + 1);
     layers.set(s.layer, (layers.get(s.layer) || 0) + 1);
@@ -43,10 +47,12 @@ export function pickDue(sources, rows, now, caps = { espn: 1, site: 2 }, perHost
   return pick;
 }
 
-const CONF_IDS = new Set(Object.values(BY_ID).map(s => String(s.espnId)));
+// Conference members' ESPN ids, per sport (soccer has its own id space).
+const confIds = sport => new Set(SCHOOLS.map(s => espnTeamId(s, sport)).filter(Boolean));
+const CONF = {};
 
 export function parse(s, body) {
-  if (s.layer === "espn") return parseEspnSchedule(JSON.parse(body), BY_ID[s.school].espnId, CONF_IDS);
+  if (s.layer === "espn") return parseEspnSchedule(JSON.parse(body), s.teamId || espnTeamId(BY_ID[s.school], s.ref), CONF[s.ref] ??= confIds(s.ref));
   return parseSidearm(body, { Y: s.Y, isFallBallSport: s.fam === "spring" });
 }
 
@@ -64,6 +70,10 @@ export async function runBatch(env, now = Date.now()) {
         const parsed = parse(s, await res.text());
         if (s.layer === "site" && !parsed.events.length && !parsed.record.overall) err = "no schedule table found";
         else data = JSON.stringify(parsed);
+      } else if (s.layer === "espn" && (status === 500 || status === 404) && (s.phase === "cur" || s.key.endsWith("|3"))) {
+        // ESPN answers 500 for a season or postseason that doesn't exist yet (baseball 2027
+        // in October). That's "nothing scheduled", not a failure.
+        data = JSON.stringify({ events: [], label: null, teamName: null, empty: true });
       } else err = `HTTP ${status}`;
     } catch (e) {
       err = String(e?.message || e).slice(0, 200);

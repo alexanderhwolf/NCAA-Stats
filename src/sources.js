@@ -1,7 +1,7 @@
 // Every page the refresh queue knows about, derived from the school config and today's date.
 // Keys are stable across a season; the URL moves when the season rolls over.
 
-import { SCHOOLS } from "./schools.js";
+import { SCHOOLS, espnTeamId } from "./schools.js";
 import { espnUrl } from "./espn.js";
 import { family, startYear, sidearmSeason, espnSeason } from "./season.js";
 
@@ -19,11 +19,13 @@ export function sourcesFor(today) {
       for (const [phase, y] of [["cur", Y], ["prev", Y - 1]]) {
         const ttl = phase === "cur" ? TTL_CUR_MIN : TTL_PREV_MIN;
         if (sp.layer === "espn") {
+          const teamId = espnTeamId(s, sp.espn);
+          if (!teamId) continue;
           for (const st of [2, 3]) {
             out.push({
               key: `${s.id}|espn|${sp.espn}|${phase}|${st}`, school: s.id, layer: "espn", ref: sp.espn, phase,
               ttl: phase === "cur" && st === 3 ? TTL_POST_MIN : ttl,
-              url: espnUrl(sp.espn, s.espnId, espnSeason(fam, y), st), Y: y, fam,
+              url: espnUrl(sp.espn, teamId, espnSeason(fam, y), st), Y: y, fam, teamId,
             });
           }
         } else if (s.platform === "sidearm") {

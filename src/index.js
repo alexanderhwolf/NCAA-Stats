@@ -18,7 +18,7 @@ async function probe(request, env) {
   const q = new URL(request.url).searchParams;
   // b: base64url-encoded target, for URLs whose own query string some clients mangle.
   let u = q.get("u");
-  if (!u && q.get("b")) { try { u = atob(q.get("b").replace(/-/g, "+").replace(/_/g, "/")); } catch { u = null; } }
+  if (!u && q.get("b")) { try { const b = q.get("b").replace(/-/g, "+").replace(/_/g, "/"); u = atob(b + "===".slice((b.length + 3) % 4)); } catch { u = null; } }
   let target;
   try { target = new URL(u); } catch { return json({ error: "bad url" }, { status: 400 }); }
   if (target.protocol !== "https:" || !PROBE_HOSTS.has(target.host)) return json({ error: "host not allowed" }, { status: 403 });

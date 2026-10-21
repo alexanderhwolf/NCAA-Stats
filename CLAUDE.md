@@ -15,7 +15,7 @@ Alex directs from his phone; Claude builds. Deploys run only when Alex starts th
 - Plain JS ESM, no build step. Tests: `node --test`. wrangler pinned at 4.120.0; use `npm run`, not `npx wrangler`.
 - Never guess a number. If a source fails, the sport shows as unavailable and the school's `unverified` list says why.
 - Tests with synthetic fixtures are marked as such. Prefer real captures from `/probe` in `test/fixtures/`.
-- Be polite to school sites and the CPU limit: keep `ESPN_PER_RUN` / `SITE_PER_RUN` small and the 2-per-host cap. An ESPN schedule is ~350 KB JSON (~5 ms CPU to parse); a school page ~1 ms after trimming to `<main>`.
+- The account is on Workers Paid (30 s CPU per run). Be polite to school sites: keep `ESPN_PER_RUN` / `SITE_PER_RUN` small and the 2-per-host cap. An ESPN schedule is ~350 KB JSON (~5 ms CPU to parse); a school page ~1 ms after trimming to `<main>`.
 - `/probe` only fetches ESPN and the 16 school domains. Turn it off (`PROBE_ENABLED: "false"`) once fixtures are captured.
 
 ## Lessons from the first manual collection (Oct 21, 2026)

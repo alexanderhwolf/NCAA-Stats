@@ -110,7 +110,8 @@ export function parseSidearm(html, { Y, isFallBallSport = false } = {}) {
     const d = parseDate(get("date"), Y);
     if (!d) continue;
     const rg = genderOf(row);
-    const res = get("res").trim().replace(/^[-\u2013\u2014]$/, "");
+    // "-" and "N -" are placeholders for "no result posted".
+    const res = get("res").trim().replace(/^(?:[A-Z]\s*)?[-\u2013\u2014]$/, "");
     const opp = get("opp").replace(/^(#|No\.\s*)\d+\s+/i, "").replace(/\s*\*$/, "").trim();
     const mo = Number(d.date.slice(5, 7));
     const exhibition = EXH.test(opp + " " + get("tour") + " " + res) || (isFallBallSport && mo >= 8);
@@ -132,5 +133,27 @@ export function parseSidearm(html, { Y, isFallBallSport = false } = {}) {
       g: rg,
     });
   }
+  out.events = mergeRounds(out.events);
   return out;
 }
+
+// Golf, tennis and multi-day meets list one row per day. Fold consecutive rows for the same
+// event (same name, a day or less apart) into one, keeping the first date, the last date as
+// end, and the latest result or place.
+export function mergeRounds(events) {
+  const out = [];
+  const key = x => `${x.opp}|${x.tournament || ""}|${x.g || ""}`;
+  for (const e of events) {
+    const prev = out[out.length - 1];
+    if (prev && key(prev) === key(e) && !prev.result && dayGap(prev.end || prev.date, e.date) <= 1) {
+      prev.end = e.end || e.date;
+      prev.result = e.result || prev.result;
+      prev.place = e.place || prev.place;
+      prev.raw = e.raw || prev.raw;
+      continue;
+    }
+    out.push({ ...e });
+  }
+  return out;
+}
+const dayGap = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 86_400_000);

@@ -3,7 +3,7 @@
 Every sport, all 16 Big 12 schools: win-loss records, meet finishes, this week's schedule and a department scorecard.
 
 One Cloudflare Worker does everything:
-- **Cron (every minute)** fetches up to 1 ESPN page and 2 school pages that are due, parses them, stores results in D1, and rebuilds the affected schools' documents.
+- **Cron (every minute)** fetches up to 3 ESPN pages and 4 school pages that are due (never two from the same school site), parses them, stores results in D1, and rebuilds the affected schools' documents.
 - **`GET /api/schools`** returns all 16 school documents (stitched from stored JSON; no parsing per request).
 - **`GET /api/status`** shows queue health: pages with data, failing pages and why.
 - **Static page** (`public/index.html`) renders the board from `/api/schools`.

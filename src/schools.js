@@ -4,12 +4,14 @@
 // layer "espn": results come from ESPN's site JSON (see src/espn.js).
 // layer "site": results come from the school's own Sidearm text-only schedule page (src/sidearm.js).
 // platform "unsupported": the school site isn't Sidearm, so its "site" sports show as unavailable for now.
-// espnId: ESPN's team id. VERIFY with /probe before trusting (see README). Soccer may use a separate id space.
+// espnId: ESPN's team id for every ESPN sport except soccer, which has its own id space
+// (espnSoccerW / espnSoccerM). All verified by team name through /probe on Oct 21, 2026.
 // A slug shared by men's and women's entries (key "slug:m" / "slug:w") is one combined page; the parser splits rows by gender markers.
 
 export const SCHOOLS = [
   {
     "id": "arizona",
+    "espnSoccerW": "20503",
     "name": "Arizona",
     "nickname": "Wildcats",
     "short": "ARIZ",
@@ -174,6 +176,7 @@ export const SCHOOLS = [
   },
   {
     "id": "arizona-state",
+    "espnSoccerW": "20529",
     "name": "Arizona State",
     "nickname": "Sun Devils",
     "short": "ASU",
@@ -370,6 +373,7 @@ export const SCHOOLS = [
   },
   {
     "id": "baylor",
+    "espnSoccerW": "20522",
     "name": "Baylor",
     "nickname": "Bears",
     "short": "BAY",
@@ -518,6 +522,7 @@ export const SCHOOLS = [
   },
   {
     "id": "byu",
+    "espnSoccerW": "20516",
     "name": "BYU",
     "nickname": "Cougars",
     "short": "BYU",
@@ -691,6 +696,8 @@ export const SCHOOLS = [
   },
   {
     "id": "ucf",
+    "espnSoccerW": "20504",
+    "espnSoccerM": "5830",
     "name": "UCF",
     "nickname": "Knights",
     "short": "UCF",
@@ -832,6 +839,7 @@ export const SCHOOLS = [
   },
   {
     "id": "cincinnati",
+    "espnSoccerW": "20392",
     "name": "Cincinnati",
     "nickname": "Bearcats",
     "short": "CIN",
@@ -971,6 +979,7 @@ export const SCHOOLS = [
   },
   {
     "id": "colorado",
+    "espnSoccerW": "20528",
     "name": "Colorado",
     "nickname": "Buffaloes",
     "short": "COLO",
@@ -1085,6 +1094,7 @@ export const SCHOOLS = [
   },
   {
     "id": "houston",
+    "espnSoccerW": "20610",
     "name": "Houston",
     "nickname": "Cougars",
     "short": "HOU",
@@ -1209,6 +1219,7 @@ export const SCHOOLS = [
   },
   {
     "id": "iowa-state",
+    "espnSoccerW": "20535",
     "name": "Iowa State",
     "nickname": "Cyclones",
     "short": "ISU",
@@ -1356,6 +1367,7 @@ export const SCHOOLS = [
   },
   {
     "id": "kansas",
+    "espnSoccerW": "20494",
     "name": "Kansas",
     "nickname": "Jayhawks",
     "short": "KU",
@@ -1504,6 +1516,7 @@ export const SCHOOLS = [
   },
   {
     "id": "kansas-state",
+    "espnSoccerW": "18357",
     "name": "Kansas State",
     "nickname": "Wildcats",
     "short": "KSU",
@@ -1635,6 +1648,7 @@ export const SCHOOLS = [
   },
   {
     "id": "oklahoma-state",
+    "espnSoccerW": "20501",
     "name": "Oklahoma State",
     "nickname": "Cowboys & Cowgirls",
     "short": "OKST",
@@ -1766,6 +1780,7 @@ export const SCHOOLS = [
   },
   {
     "id": "tcu",
+    "espnSoccerW": "20518",
     "name": "TCU",
     "nickname": "Horned Frogs",
     "short": "TCU",
@@ -1945,6 +1960,7 @@ export const SCHOOLS = [
   },
   {
     "id": "texas-tech",
+    "espnSoccerW": "20540",
     "name": "Texas Tech",
     "nickname": "Red Raiders",
     "short": "TTU",
@@ -2069,6 +2085,7 @@ export const SCHOOLS = [
   },
   {
     "id": "utah",
+    "espnSoccerW": "20520",
     "name": "Utah",
     "nickname": "Utes",
     "short": "UTAH",
@@ -2225,6 +2242,8 @@ export const SCHOOLS = [
   },
   {
     "id": "west-virginia",
+    "espnSoccerW": "20382",
+    "espnSoccerM": "5658",
     "name": "West Virginia",
     "nickname": "Mountaineers",
     "short": "WVU",
@@ -2382,3 +2401,10 @@ export const SCHOOLS = [
 ];
 
 export const BY_ID = Object.fromEntries(SCHOOLS.map(s => [s.id, s]));
+
+// The ESPN team id this school uses for a given ESPN sport key.
+export function espnTeamId(school, espnSport) {
+  if (espnSport === "womens-soccer") return school.espnSoccerW;
+  if (espnSport === "mens-soccer") return school.espnSoccerM;
+  return String(school.espnId);
+}
