@@ -168,7 +168,7 @@ button:focus-visible, a:focus-visible, tr:focus-visible { outline: 2px solid var
 <main class="wrap">
   <section aria-labelledby="sc-h">
     <h2 class="sec" id="sc-h">Department scorecard</h2>
-    <p class="lede">Combined head-to-head record for sports in season now, plus Big 12 titles won in 2025–26 (regular-season and tournament titles count separately). Football, volleyball and soccer is the fairest comparison; "all confirmed" adds every men's and women's sport with a confirmed record. Adj. weights each sport equally. Tap ⓘ to see what counted, or a school to open it.</p>
+    <p class="lede">Combined head-to-head record for sports in season now, plus Big 12 titles won in 2025–26 (regular-season and tournament titles count separately). Football, volleyball and soccer is the fairest comparison; "all confirmed" adds every men's and women's sport with a confirmed record. Common counts only the sports every school has a record in, so it compares like with like. Tap ⓘ to see what counted, or a school to open it.</p>
     <div id="scorecard"><div class="msg">Loading data…</div></div>
   </section>
 
@@ -230,7 +230,7 @@ function titlesFor(name) {
 // Counting rules live in standings.js, shared with the other looks.
 function dept(id, scope) {
   const d = state.data[id];
-  return d ? { ...B12.dept(d, scope || state.scope), titles: titlesFor(BY_ID[id].name).length } : null;
+  return d ? { ...B12.dept(d, scope || state.scope, Object.values(state.data)), titles: titlesFor(BY_ID[id].name).length } : null;
 }
 
 function renderScorecard() {
@@ -238,7 +238,7 @@ function renderScorecard() {
   const rows = SCHOOLS.map(s => ({ s, d: dept(s.id) })).filter(r => r.d);
   if (!rows.length) { box.innerHTML = `<div class="msg">No data yet.</div>`; return; }
   const k = state.sortKey, dir = state.sortDir === "desc" ? -1 : 1;
-  const val = r => k === "name" ? r.s.name : k === "wins" ? r.d.w : k === "titles" ? r.d.titles : k === "adj" ? (r.d.adj ?? -1) : (r.d.pct ?? -1);
+  const val = r => k === "name" ? r.s.name : k === "wins" ? r.d.w : k === "titles" ? r.d.titles : k === "common" ? (r.d.common ?? -1) : (r.d.pct ?? -1);
   rows.sort((a, b) => { const x = val(a), y = val(b); if (x < y) return -1 * dir; if (x > y) return 1 * dir; return a.s.name.localeCompare(b.s.name); });
   const th = (key, label, cls = "") => `<th class="${cls}" scope="col"><button type="button" data-sort="${key}" aria-sort="${k === key ? state.sortDir + "ending" : "none"}">${label}</button></th>`;
   const tog = `<div style="display: flex; align-items: center; gap: 4px; margin-bottom: 10px"><div class="seg" style="margin: 0" role="group" aria-label="Sports counted">
@@ -246,12 +246,12 @@ function renderScorecard() {
     <button type="button" data-scope="all" aria-pressed="${state.scope === "all"}">All confirmed sports</button></div>${info("how", "How the standings are counted")}</div>`;
   const disc = B12.disclaimer(rows, state.scope, esc);
   box.innerHTML = tog + (state.open === "how" ? `<div class="howbox">${B12.HOW}</div>` : "") + `<div class="score-wrap"><table class="score">
-    <thead><tr>${th("name", "School")}${th("wins", "W–L–T", "hide-sm")}${th("pct", "Pct")}${th("adj", "Adj.")}<th scope="col" class="hide-sm" title="Sports counted">Spts</th>${th("titles", "Titles")}</tr></thead>
+    <thead><tr>${th("name", "School")}${th("wins", "W–L–T", "hide-sm")}${th("pct", "Pct")}${th("common", "Common")}<th scope="col" class="hide-sm" title="Sports counted">Spts</th>${th("titles", "Titles")}</tr></thead>
     <tbody>${rows.map((r, i) => `<tr tabindex="0" data-id="${r.s.id}" class="${state.sel === r.s.id ? "sel" : ""}" style="--row-sc:${r.s.bg}">
       <td><span class="rank">${i + 1}</span><span class="sw" style="background:${r.s.bg}"></span>${esc(r.s.name)}${state.scope === "core" && r.d.missing.length ? `<span class="dag" title="Not an equal comparison">†</span>` : ""}${info(r.s.id, "What counts for " + r.s.name)}</td>
       <td class="wl hide-sm">${recStr(r.d.w, r.d.l, r.d.t)}</td>
       <td>${pctStr(r.d.pct)}</td>
-      <td>${pctStr(r.d.adj)}</td>
+      <td>${pctStr(r.d.common)}</td>
       <td class="hide-sm">${r.d.n}</td>
       <td>${r.d.titles}</td></tr>${state.open === r.s.id ? `<tr class="exp"><td colspan="6">${B12.breakdown(r.d, esc)}</td></tr>` : ""}`).join("")}</tbody></table></div>
     ${disc ? `<p class="disc">${disc}</p>` : ""}`;

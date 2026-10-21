@@ -303,7 +303,7 @@ function titlesFor(name) { return (state.titles?.titles || []).filter(t => (t.ch
 function dept(id, scope) {
   const d = state.data[id];
   if (!d) return null;
-  return { ...B12.dept(d, scope), titles: titlesFor(BY_ID[id].name).length };
+  return { ...B12.dept(d, scope, Object.values(state.data)), titles: titlesFor(BY_ID[id].name).length };
 }
 
 function renderIndex() {
@@ -318,7 +318,7 @@ function renderSched() {
   const rows = SCHOOLS.map(s => ({ s, d: dept(s.id, state.scope) })).filter(r => r.d);
   if (!rows.length) { box.innerHTML = `<div class="msg">No records yet. The board fills in within an hour of a fresh deploy.</div>`; return; }
   const k = state.sortKey, dir = state.sortDir === "desc" ? -1 : 1;
-  const val = r => k === "name" ? r.s.name : k === "w" ? r.d.w : k === "titles" ? r.d.titles : k === "adj" ? (r.d.adj ?? -1) : (r.d.pct ?? -1);
+  const val = r => k === "name" ? r.s.name : k === "w" ? r.d.w : k === "titles" ? r.d.titles : k === "common" ? (r.d.common ?? -1) : (r.d.pct ?? -1);
   rows.sort((a, b) => { const x = val(a), y = val(b); return x < y ? -dir : x > y ? dir : a.s.name.localeCompare(b.s.name); });
   const th = (key, label, cls = "") => `<th scope="col" class="${cls}"><button type="button" data-sort="${key}" aria-sort="${k === key ? state.sortDir + "ending" : "none"}">${label}</button></th>`;
   document.getElementById("sched-sub").textContent = state.scope === "core" ? "Men's football + women's volleyball + women's soccer · titles 2025–26" : "Every men's and women's sport with a confirmed record · titles 2025–26";
@@ -333,10 +333,10 @@ function renderSched() {
     </div>
     ${state.open === "how" ? `<div class="howbox">${B12.HOW}</div>` : ""}
     <div class="box"><table class="sched">
-      <thead><tr>${th("name", "Mark · school")}${th("w", "W", "hide-sm")}<th scope="col" class="hide-sm" style="padding: 0 8px">L</th><th scope="col" class="hide-sm" style="padding: 0 8px">T</th>${th("pct", "Pct")}${th("adj", "Adj.")}<th scope="col" class="hide-sm" style="padding: 0 8px">Spt</th>${th("titles", "Titles")}</tr></thead>
+      <thead><tr>${th("name", "Mark · school")}${th("w", "W", "hide-sm")}<th scope="col" class="hide-sm" style="padding: 0 8px">L</th><th scope="col" class="hide-sm" style="padding: 0 8px">T</th>${th("pct", "Pct")}${th("common", "Common")}<th scope="col" class="hide-sm" style="padding: 0 8px">Spt</th>${th("titles", "Titles")}</tr></thead>
       <tbody>${rows.map((r, i) => `<tr class="${state.sel === r.s.id ? "sel" : ""}">
         <td><span class="nmcell"><button type="button" data-id="${r.s.id}"><span class="mk">D${String(i + 1).padStart(2, "0")}</span>${esc(r.s.name)}</button>${state.scope === "core" && r.d.missing.length ? `<span class="dag" title="Not an equal comparison">†</span>` : ""}${infoBtn(r.s.id, "What counts for " + r.s.name)}</span></td>
-        <td class="hide-sm">${r.d.w}</td><td class="hide-sm">${r.d.l}</td><td class="hide-sm">${r.d.t}</td><td style="font-weight: 500">${pctStr(r.d.pct)}</td><td>${pctStr(r.d.adj)}</td><td class="hide-sm">${r.d.n}</td><td>${r.d.titles}</td>
+        <td class="hide-sm">${r.d.w}</td><td class="hide-sm">${r.d.l}</td><td class="hide-sm">${r.d.t}</td><td style="font-weight: 500">${pctStr(r.d.pct)}</td><td>${pctStr(r.d.common)}</td><td class="hide-sm">${r.d.n}</td><td>${r.d.titles}</td>
       </tr>${state.open === r.s.id ? `<tr class="exp"><td colspan="8">${B12.breakdown(r.d, esc)}</td></tr>` : ""}`).join("")}</tbody>
     </table></div>
     ${disc ? `<p class="disc">${disc}</p>` : ""}`;

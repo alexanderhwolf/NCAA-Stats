@@ -143,7 +143,7 @@ footer.small { font-size: 12px; color: var(--muted); border-top: 1px solid var(-
 @media (max-width: 640px) {
   ol.stand li .rowbtn { grid-template-columns: 22px minmax(0, 1fr) 44px 44px 18px; gap: 8px; padding-left: 4px; padding-right: 4px; }
   .stand-head { grid-template-columns: 22px minmax(0, 1fr) 44px 44px 18px 26px; gap: 8px; padding-left: 4px; padding-right: 4px; }
-  /* Phones: Pct and Adj. only; each school's ⓘ has the full records. */
+  /* Phones: Pct and Common only; each school's ⓘ has the full records. */
   ol.stand .wl, .stand-head .wlh { display: none; }
   .aj { font-size: 21px; }
   .exp { margin: 4px 0 8px; }
@@ -233,7 +233,7 @@ function titlesFor(name) { return (state.titles?.titles || []).filter(t => (t.ch
 function dept(id, scope) {
   const d = state.data[id];
   if (!d) return null;
-  return { ...B12.dept(d, scope), titles: titlesFor(BY_ID[id].name).length };
+  return { ...B12.dept(d, scope, Object.values(state.data)), titles: titlesFor(BY_ID[id].name).length };
 }
 
 const infoBtn = (key, label) => `<button type="button" class="info" data-info="${key}" aria-expanded="${state.open === key}" aria-label="${esc(label)}">i</button>`;
@@ -247,18 +247,18 @@ function renderStand() {
   const hint = document.getElementById("stand-hint");
   if (!rows.length) { box.innerHTML = `<p class="msg">No records yet. The board fills in within an hour of a fresh deploy.</p>`; hint.textContent = ""; return; }
   const k = state.sortKey, dir = state.sortDir === "desc" ? -1 : 1;
-  const val = r => k === "name" ? r.s.name : k === "titles" ? r.d.titles : k === "w" ? r.d.w : k === "adj" ? (r.d.adj ?? -1) : (r.d.pct ?? -1);
+  const val = r => k === "name" ? r.s.name : k === "titles" ? r.d.titles : k === "w" ? r.d.w : k === "common" ? (r.d.common ?? -1) : (r.d.pct ?? -1);
   rows.sort((a, b) => { const x = val(a), y = val(b); return x < y ? -dir : x > y ? dir : a.s.name.localeCompare(b.s.name); });
   const hb = (key, label) => `<button type="button" data-sort="${key}" aria-sort="${k === key ? state.sortDir + "ending" : "none"}">${label}</button>`;
   box.innerHTML = `${state.open === "how" ? `<div class="howbox">${B12.HOW}</div>` : ""}
-    <div class="stand-head"><span aria-hidden="true">#</span><span class="nmh">${hb("name", "School")}</span><span class="bh"></span><span class="wlh" style="text-align:right">${hb("w", "W–L–T")}</span><span style="text-align:right">${hb("pct", "Pct")}</span><span style="text-align:right">${hb("adj", "Adj.")}</span><span style="text-align:right">${hb("titles", "Ttl")}</span><span></span></div>
-    <ol class="stand">${rows.map((r, i) => `<li class="${state.sel === r.s.id ? "sel" : ""}"><div class="rowwrap"><button type="button" class="rowbtn" data-id="${r.s.id}" aria-label="${esc(r.s.name)}: ${recStr(r.d.w, r.d.l, r.d.t)}, pct ${pctStr(r.d.pct)}, adjusted ${pctStr(r.d.adj)}, ${r.d.titles} titles">
+    <div class="stand-head"><span aria-hidden="true">#</span><span class="nmh">${hb("name", "School")}</span><span class="bh"></span><span class="wlh" style="text-align:right">${hb("w", "W–L–T")}</span><span style="text-align:right">${hb("pct", "Pct")}</span><span style="text-align:right">${hb("common", "Common")}</span><span style="text-align:right">${hb("titles", "Ttl")}</span><span></span></div>
+    <ol class="stand">${rows.map((r, i) => `<li class="${state.sel === r.s.id ? "sel" : ""}"><div class="rowwrap"><button type="button" class="rowbtn" data-id="${r.s.id}" aria-label="${esc(r.s.name)}: ${recStr(r.d.w, r.d.l, r.d.t)}, pct ${pctStr(r.d.pct)}, adjusted ${pctStr(r.d.common)}, ${r.d.titles} titles">
       <span class="rk">${i + 1}</span>
       <span class="nm"><i style="background:${r.s.color}"></i><span>${esc(r.s.name)}${state.scope === "core" && r.d.missing.length ? `<span class="dag" title="Not an equal comparison"> †</span>` : ""}</span></span>
       <span class="bar" aria-hidden="true"><i style="width:${Math.round((r.d.pct ?? 0) * 100)}%"></i></span>
       <span class="wl">${recStr(r.d.w, r.d.l, r.d.t)}</span>
       <span class="pc">${pctStr(r.d.pct)}</span>
-      <span class="aj">${pctStr(r.d.adj)}</span>
+      <span class="aj">${pctStr(r.d.common)}</span>
       <span class="tt">${r.d.titles}</span>
     </button>${infoBtn(r.s.id, "What counts for " + r.s.name)}</div>
     ${state.open === r.s.id ? `<div class="exp">${B12.breakdown(r.d, esc)}</div>` : ""}</li>`).join("")}</ol>`;
