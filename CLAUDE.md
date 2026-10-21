@@ -11,6 +11,11 @@ Alex directs from his phone; Claude builds. Deploys run only when Alex starts th
 - D1 tables: `pages` (queue + parsed data), `docs` (assembled per school), `probe` (raw captures), `runs` (one row per cron run).
 - Sidearm season URLs are `/sports/<slug>/schedule/text/<season>` (season AFTER `text`; `/schedule/<season>/text` is a 404). ESPN team schedules don't flag conference games; a regular-season game vs a Big 12 member counts as conference.
 
+## Past seasons (year selector)
+- `memberIn()` / `membersIn()` in `src/schools.js`: the Big 12 as it was each season. Texas and Oklahoma are in `SCHOOLS` for 2016-17 to 2023-24 only; current sources skip non-members.
+- `historySources()` (phase `hist`, keys `school|site|slug|y2019`): Sidearm schools read every sport from the school's text page; non-Sidearm schools use ESPN. ESPN's pre-2020 seasons are incomplete (TCU women's soccer 2016: 5 matches), so don't switch Sidearm history to ESPN.
+- Backfill only uses capacity left after cur/prev, newest season first. Season docs live in `hist_docs`; last season is assembled from `prev` pages.
+
 ## Rules
 - Plain JS ESM, no build step. Tests: `node --test`. wrangler pinned at 4.120.0; use `npm run`, not `npx wrangler`.
 - Never guess a number. If a source fails, the sport shows as unavailable and the school's `unverified` list says why.
