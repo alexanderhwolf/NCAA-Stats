@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Win-loss records, meet finishes and this week's schedule for every sport at all 16 Big 12 schools.">
+<title>Big 12 Records Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+/* Layout: conference header, department scorecard table, school picker, then the selected school's band, this-week strip and sport tiles by gender. Data comes from /api/schools. */
+:root {
+  --bg: #f5f5f3; --surface: #ffffff; --fg: #1c1d20; --muted: #62646b; --line: #dfe0e3;
+  --head: #15171c; --head-ink: #f4f4f2;
+  --win: #1f7a4d; --loss: #b3373b; --tie: #8a6d1d; --chip-bg: #eeeef0; --hi: #fff6d6;
+  --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111215; --surface: #1a1c20; --fg: #ececee; --muted: #a2a4ab; --line: #2e3036;
+    --head: #08090b; --head-ink: #f4f4f2;
+    --win: #5cc98f; --loss: #ef7c80; --tie: #d9b85a; --chip-bg: #262830; --hi: #3a3320;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111215; --surface: #1a1c20; --fg: #ececee; --muted: #a2a4ab; --line: #2e3036;
+  --head: #08090b; --head-ink: #f4f4f2;
+  --win: #5cc98f; --loss: #ef7c80; --tie: #d9b85a; --chip-bg: #262830; --hi: #3a3320;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.45; margin: 0; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.top { background: var(--head); color: var(--head-ink); }
+.top .wrap { padding-block: 24px 20px; display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: end; justify-content: space-between; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(32px, 7vw, 50px); line-height: .95; margin: 0; text-transform: uppercase; letter-spacing: .01em; }
+.top .sub { margin: 6px 0 0; opacity: .8; font-size: 14.5px; }
+.asof { font-family: var(--display); font-size: 15px; letter-spacing: .08em; text-transform: uppercase; border: 1px solid color-mix(in srgb, var(--head-ink) 35%, transparent); padding: 6px 12px; border-radius: 3px; white-space: nowrap; }
+main.wrap { padding-block: 22px 48px; display: grid; gap: 30px; grid-template-columns: minmax(0, 1fr); }
+main.wrap > *, #school > *, .gender-block > * { min-width: 0; }
+h2.sec { font-family: var(--display); font-weight: 700; font-size: clamp(24px, 4.5vw, 32px); text-transform: uppercase; letter-spacing: .03em; margin: 0 0 4px; }
+.lede { color: var(--muted); margin: 0 0 12px; max-width: 70ch; font-size: 14px; }
+.msg { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px; color: var(--muted); }
+
+/* Scorecard */
+.score-wrap { overflow-x: auto; }
+.score { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; font-variant-numeric: tabular-nums; }
+.score th, .score td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.score th:first-child, .score td:first-child { text-align: left; white-space: normal; }
+.score thead th { font-family: var(--display); font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.score thead button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-transform: inherit; letter-spacing: inherit; }
+.score thead button[aria-sort="descending"]::after { content: " ▾"; }
+.score thead button[aria-sort="ascending"]::after { content: " ▴"; }
+.score tbody tr { cursor: pointer; }
+.score tbody tr:hover td { background: color-mix(in srgb, var(--chip-bg) 60%, transparent); }
+.score tbody tr.sel td { background: var(--hi); }
+.score .rank { color: var(--muted); width: 1.9em; display: inline-block; }
+.score .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; vertical-align: 0; }
+.score td.wl { font-weight: 600; }
+.score tr:last-child td { border-bottom: 0; }
+@media (max-width: 520px) {
+  .score { font-size: 14px; }
+  .score th, .score td { padding: 8px 5px; }
+  .score .rank { display: none; }
+  .score .sw { display: none; }
+  .score td:first-child { border-left: 4px solid var(--row-sc, transparent); }
+  .seg { display: flex; } .seg button { flex: 1; }
+}
+
+.seg { display: inline-flex; flex-wrap: wrap; gap: 0; margin-bottom: 10px; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.seg button { font: 600 13.5px var(--body); padding: 6px 12px; border: 0; background: var(--surface); color: var(--muted); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+/* Picker */
+.picker { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.picker button { flex: none; font-family: var(--display); font-weight: 600; font-size: 15px; text-transform: uppercase; letter-spacing: .05em; padding: 6px 12px; border-radius: 3px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; }
+.picker button[aria-pressed="true"] { background: var(--sc); color: var(--sc-ink); border-color: var(--sc); }
+
+/* School band */
+.band { background: var(--sc); color: var(--sc-ink); border-radius: 6px; padding: 20px 18px; display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: end; justify-content: space-between; }
+.band h2 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 6vw, 44px); line-height: .95; margin: 0; text-transform: uppercase; }
+.band .facts { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--display); font-size: 17px; letter-spacing: .04em; text-transform: uppercase; }
+.band .facts b { font-size: 24px; margin-right: 4px; }
+#school { display: grid; gap: 26px; scroll-margin-top: 8px; }
+
+/* This week */
+.week { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; scroll-snap-type: x proximity; }
+.ev-card { flex: none; width: 190px; scroll-snap-align: start; background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--sc); border-radius: 6px; padding: 10px 12px; display: grid; gap: 3px; font-size: 13.5px; }
+.ev-card .d { font-family: var(--display); font-weight: 700; font-size: 17px; text-transform: uppercase; letter-spacing: .04em; }
+.ev-card .s { font-weight: 700; }
+.ev-card .o { color: var(--muted); overflow-wrap: anywhere; }
+.ev-card .r { font-weight: 600; }
+.ev-card .r.w { color: var(--win); } .ev-card .r.l { color: var(--loss); }
+.empty { color: var(--muted); font-size: 14px; }
+
+/* Tiles */
+.gender-block { display: grid; gap: 20px; }
+.gh { font-family: var(--display); font-weight: 700; font-size: clamp(24px, 4.5vw, 32px); text-transform: uppercase; letter-spacing: .03em; margin: 0; padding-bottom: 6px; border-bottom: 3px solid var(--sc); }
+.group h3 { font-family: var(--display); font-weight: 600; font-size: 18px; text-transform: uppercase; letter-spacing: .06em; margin: 0; }
+.group .lede { margin: 2px 0 10px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.tile.off { background: color-mix(in srgb, var(--surface) 75%, var(--chip-bg)); }
+.tile-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.sport { font-weight: 700; font-size: 16px; }
+.tag { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); background: var(--chip-bg); padding: 2px 7px; border-radius: 2px; white-space: nowrap; }
+.rec { font-family: var(--display); font-weight: 700; font-size: 44px; line-height: 1; font-variant-numeric: tabular-nums; }
+.rec small { font-size: 17px; color: var(--muted); font-weight: 600; margin-left: 8px; letter-spacing: .04em; }
+.rec.none { font-size: 24px; color: var(--muted); }
+.split { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 12.5px; padding: 2px 8px; border-radius: 2px; background: var(--chip-bg); font-variant-numeric: tabular-nums; }
+.chip.w { color: var(--win); } .chip.l { color: var(--loss); }
+.bar { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; display: flex; }
+.bar i { display: block; height: 100%; }
+.bw { background: var(--win); } .bl { background: var(--loss); } .bt { background: var(--tie); }
+.meta { font-size: 13.5px; color: var(--muted); display: grid; gap: 2px; }
+.meta b { color: var(--fg); font-weight: 600; }
+ol.fin { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+ol.fin li { display: grid; grid-template-columns: 64px 1fr auto; gap: 8px; font-size: 13.5px; align-items: baseline; }
+.place { font-family: var(--display); font-weight: 700; font-size: 17px; font-variant-numeric: tabular-nums; }
+.place.top { color: var(--win); }
+.fin .e { min-width: 0; overflow-wrap: anywhere; }
+.fin .dt { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+details.dn { border: 0; background: none; padding: 0; font-size: 12.5px; }
+details.dn summary { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+details.dn p { margin: 4px 0 0; }
+/* Titles + footer */
+.titles { margin: 0; padding-left: 18px; font-size: 14px; columns: 2 260px; column-gap: 24px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; font-size: 13.5px; color: var(--muted); }
+details summary { cursor: pointer; color: var(--fg); font-weight: 600; }
+details ul { margin: 8px 0 0; padding-left: 18px; columns: 2 260px; column-gap: 24px; }
+details a, footer a { color: var(--fg); }
+footer { color: var(--muted); font-size: 13px; display: grid; gap: 6px; }
+button:focus-visible, a:focus-visible, tr:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div>
+      <h1>Big 12 Records Board</h1>
+      <p class="sub">Every sport, all 16 schools: records, meet finishes and this week's schedule</p>
+    </div>
+    <div class="asof" id="asof">Loading…</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section aria-labelledby="sc-h">
+    <h2 class="sec" id="sc-h">Department scorecard</h2>
+    <p class="lede">Combined head-to-head record for sports in season now, plus Big 12 titles won in 2025–26 (regular-season and tournament titles count separately). Football, volleyball and soccer is the fair comparison; "all confirmed" also adds sports like equestrian or swimming wherever a record could be confirmed, so it varies with coverage. Tap a school to open it.</p>
+    <div id="scorecard"><div class="msg">Loading data…</div></div>
+  </section>
+
+  <nav class="picker" id="picker" aria-label="Choose a school"></nav>
+
+  <section id="school" aria-live="polite"></section>
+
+  <footer>
+    <p>Unofficial fan board; not affiliated with the Big 12 or any school. Football, basketball, volleyball, soccer, baseball and softball come from ESPN; every other sport comes from the school's own athletics site. Updated automatically every few hours. Anything that couldn't be loaded is listed under the school, not guessed.</p>
+  </footer>
+</main>
+
+<script>
+const SCHOOLS = [
+  { id: "arizona", name: "Arizona", short: "ARIZ", bg: "#0C234B", ink: "#ffffff" },
+  { id: "arizona-state", name: "Arizona State", short: "ASU", bg: "#8C1D40", ink: "#ffffff" },
+  { id: "baylor", name: "Baylor", short: "BAY", bg: "#154734", ink: "#ffffff" },
+  { id: "byu", name: "BYU", short: "BYU", bg: "#002E5D", ink: "#ffffff" },
+  { id: "ucf", name: "UCF", short: "UCF", bg: "#000000", ink: "#FFC904" },
+  { id: "cincinnati", name: "Cincinnati", short: "CIN", bg: "#C8102E", ink: "#ffffff" },
+  { id: "colorado", name: "Colorado", short: "COLO", bg: "#000000", ink: "#CFB87C" },
+  { id: "houston", name: "Houston", short: "HOU", bg: "#C8102E", ink: "#ffffff" },
+  { id: "iowa-state", name: "Iowa State", short: "ISU", bg: "#9E1B32", ink: "#F1BE48" },
+  { id: "kansas", name: "Kansas", short: "KU", bg: "#0051BA", ink: "#ffffff" },
+  { id: "kansas-state", name: "Kansas State", short: "KSU", bg: "#512888", ink: "#ffffff" },
+  { id: "oklahoma-state", name: "Oklahoma State", short: "OKST", bg: "#FF7300", ink: "#000000" },
+  { id: "tcu", name: "TCU", short: "TCU", bg: "#4D1979", ink: "#ffffff" },
+  { id: "texas-tech", name: "Texas Tech", short: "TTU", bg: "#CC0000", ink: "#ffffff" },
+  { id: "utah", name: "Utah", short: "UTAH", bg: "#BE0000", ink: "#ffffff" },
+  { id: "west-virginia", name: "West Virginia", short: "WVU", bg: "#002855", ink: "#EAAA00" }
+];
+const BY_ID = Object.fromEntries(SCHOOLS.map(s => [s.id, s]));
+
+const state = { data: {}, titles: null, info: null, sel: null, sortKey: "pct", sortDir: "desc", scope: "core" };
+
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+function parseD(s) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ""); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; }
+function fmtD(s) { const d = parseD(s); return d ? `${MON[d.getMonth()]} ${d.getDate()}` : (s || ""); }
+function fmtDow(s) { const d = parseD(s); return d ? `${DOW[d.getDay()]} ${MON[d.getMonth()]} ${d.getDate()}` : (s || ""); }
+function vsAt(at) { return at === "Away" ? "at" : "vs"; }
+function oppLine(x) { if (!x) return ""; const n = x.at === "Neutral" ? " (neutral)" : ""; return `${vsAt(x.at)} ${x.opp || "TBA"}${n}`; }
+function recStr(w, l, t) { return `${w}–${l}${t ? "–" + t : ""}`; }
+function pct(w, l, t) { const n = w + l + t; return n ? (w + t / 2) / n : null; }
+function pctStr(p) { return p == null ? "—" : p.toFixed(3).replace(/^0/, ""); }
+
+function titlesFor(name) {
+  return (state.titles?.titles || []).filter(t => (t.champions || []).includes(name));
+}
+const CORE = s => (s.g === "Men" && s.name === "Football") || (s.g === "Women" && (s.name === "Volleyball" || s.name === "Soccer"));
+function dept(id, scope) {
+  const d = state.data[id];
+  if (!d) return null;
+  let w = 0, l = 0, t = 0, n = 0;
+  (d.sports || []).forEach(s => {
+    if ((scope || state.scope) === "core" && !CORE(s)) return;
+    if (s.status === "in" && s.kind === "h2h" && Number.isFinite(s.w) && Number.isFinite(s.l)) {
+      w += s.w; l += s.l; t += Number.isFinite(s.t) ? s.t : 0; n++;
+    }
+  });
+  return { w, l, t, n, pct: pct(w, l, t), titles: titlesFor(BY_ID[id].name).length };
+}
+
+function renderScorecard() {
+  const box = document.getElementById("scorecard");
+  const rows = SCHOOLS.map(s => ({ s, d: dept(s.id) })).filter(r => r.d);
+  if (!rows.length) { box.innerHTML = `<div class="msg">No data yet.</div>`; return; }
+  const k = state.sortKey, dir = state.sortDir === "desc" ? -1 : 1;
+  const val = r => k === "name" ? r.s.name : k === "wins" ? r.d.w : k === "titles" ? r.d.titles : (r.d.pct ?? -1);
+  rows.sort((a, b) => { const x = val(a), y = val(b); if (x < y) return -1 * dir; if (x > y) return 1 * dir; return a.s.name.localeCompare(b.s.name); });
+  const th = (key, label, cls = "") => `<th class="${cls}" scope="col"><button type="button" data-sort="${key}" aria-sort="${k === key ? state.sortDir + "ending" : "none"}">${label}</button></th>`;
+  const tog = `<div class="seg" role="group" aria-label="Sports counted">
+    <button type="button" data-scope="core" aria-pressed="${state.scope === "core"}">Football, volleyball &amp; soccer</button>
+    <button type="button" data-scope="all" aria-pressed="${state.scope === "all"}">All confirmed sports</button></div>`;
+  box.innerHTML = tog + `<div class="score-wrap"><table class="score">
+    <thead><tr>${th("name", "School")}${th("wins", "W–L–T")}${th("pct", "Pct")}<th scope="col" title="Sports counted">Spts</th>${th("titles", "Titles")}</tr></thead>
+    <tbody>${rows.map((r, i) => `<tr tabindex="0" data-id="${r.s.id}" class="${state.sel === r.s.id ? "sel" : ""}" style="--row-sc:${r.s.bg}">
+      <td><span class="rank">${i + 1}</span><span class="sw" style="background:${r.s.bg}"></span>${esc(r.s.name)}</td>
+      <td class="wl">${recStr(r.d.w, r.d.l, r.d.t)}</td>
+      <td>${pctStr(r.d.pct)}</td>
+      <td>${r.d.n}</td>
+      <td>${r.d.titles}</td></tr>`).join("")}</tbody></table></div>`;
+}
+
+function renderPicker() {
+  const nav = document.getElementById("picker");
+  nav.innerHTML = SCHOOLS.map(s => `<button type="button" data-id="${s.id}" aria-pressed="${state.sel === s.id}" style="--sc:${s.bg};--sc-ink:${s.ink}" title="${esc(s.name)}">${esc(s.short)}</button>`).join("");
+}
+
+function recordTile(s) {
+  const off = s.status === "off";
+  const has = Number.isFinite(s.w) && Number.isFinite(s.l);
+  const t = Number.isFinite(s.t) ? s.t : 0;
+  const total = has ? s.w + s.l + t : 0;
+  const rec = has ? `<div class="rec">${recStr(s.w, s.l, t)}${off ? `<small>${esc(s.season || "")} FINAL</small>` : ""}</div>`
+                  : `<div class="rec none">Record not confirmed</div>`;
+  const bar = total ? `<div class="bar" aria-hidden="true"><i class="bw" style="width:${s.w / total * 100}%"></i><i class="bt" style="width:${t / total * 100}%"></i><i class="bl" style="width:${s.l / total * 100}%"></i></div>` : "";
+  const chips = [];
+  if (s.conf) chips.push(`<span class="chip">${esc(s.confName || "Conf")} ${esc(s.conf)}</span>`);
+  if (s.streak && !off) chips.push(`<span class="chip ${s.streak[0] === "W" ? "w" : s.streak[0] === "L" ? "l" : ""}">Streak ${esc(s.streak)}</span>`);
+  if (total) chips.push(`<span class="chip">${pctStr(pct(s.w, s.l, t))} pct</span>`);
+  const meta = [];
+  if (s.last && !off) meta.push(`<div><b>Last:</b> ${esc(s.last.result || "")} ${esc(oppLine(s.last))}, ${esc(fmtD(s.last.date))}</div>`);
+  if (s.summary) meta.push(`<div>${esc(s.summary)}</div>`);
+  if (s.next) meta.push(`<div><b>${off ? "Opens" : "Next"}:</b> ${esc(oppLine(s.next))}, ${esc(fmtD(s.next.date))}</div>`);
+  return `<article class="tile${off ? " off" : ""}">
+    <div class="tile-head"><span class="sport">${esc(s.name)}</span><span class="tag">${esc(s.g)}</span></div>
+    ${rec}${bar}${chips.length ? `<div class="split">${chips.join("")}</div>` : ""}
+    <div class="meta">${meta.join("")}</div>${noteBox(s)}</article>`;
+}
+
+function meetTile(s) {
+  const off = s.status === "off";
+  const fin = (s.finishes || []);
+  const list = fin.length ? `<ol class="fin">${fin.map(f => {
+    const top = /^(T-)?(1st|2nd|3rd)\b/i.test(f.place || "");
+    return `<li><span class="place${top ? " top" : ""}">${esc(f.place)}</span><span class="e">${esc(f.event)}</span><span class="dt">${esc(fmtD(f.date))}</span></li>`;
+  }).join("")}</ol>` : `<div class="rec none">${off ? "No W–L (meet sport)" : "No posted finishes yet"}</div>`;
+  const meta = [];
+  if (s.summary) meta.push(`<div>${esc(s.summary)}</div>`);
+  if (s.next) meta.push(`<div><b>${off ? "Opens" : "Next"}:</b> ${esc(s.next.opp || "TBA")}, ${esc(fmtD(s.next.date))}</div>`);
+  return `<article class="tile${off ? " off" : ""}">
+    <div class="tile-head"><span class="sport">${esc(s.name)}</span><span class="tag">${esc(s.g)}${off && s.season ? " · " + esc(s.season) : ""}</span></div>
+    ${list}<div class="meta">${meta.join("")}</div>${noteBox(s)}</article>`;
+}
+function noteBox(s) {
+  if (!s.notes) return "";
+  return `<details class="dn"><summary>Data note</summary><p>${esc(s.notes)}</p></details>`;
+}
+
+const GROUPS = [
+  { title: "In season · head-to-head", lede: "Current season, overall record from the school's schedule page. Exhibitions excluded.", test: s => s.status === "in" && s.kind === "h2h", render: recordTile },
+  { title: "In season · multi-team events", lede: "Golf, cross country and other meet sports: team finishes this season.", test: s => s.status === "in" && s.kind === "meet", render: meetTile },
+  { title: "Off-season · last season", lede: "Not competing yet this season (or season over). Shows the most recent completed season.", test: s => s.status !== "in", render: s => s.kind === "meet" ? meetTile(s) : recordTile(s) }
+];
+
+function renderSchool() {
+  const box = document.getElementById("school");
+  const s = BY_ID[state.sel];
+  const d = s && state.data[s.id];
+  if (!d) { box.innerHTML = s ? `<div class="msg">No data for ${esc(s.name)} yet.</div>` : ""; return; }
+  box.style.setProperty("--sc", s.bg); box.style.setProperty("--sc-ink", s.ink);
+  const dp = dept(s.id, "all");
+  const tl = titlesFor(s.name);
+  const week = (d.week || []).slice().sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  const weekHtml = week.length ? `<div class="week">${week.map(e => {
+    const r = e.result || "";
+    const rc = /^W\b/.test(r) ? "w" : /^L\b/.test(r) ? "l" : "";
+    const meet = (d.sports || []).some(x => x.name === e.sport && x.kind === "meet");
+    return `<div class="ev-card"><span class="d">${esc(fmtDow(e.date))}</span><span class="s">${esc(e.g === "Coed" ? "" : e.g + "'s ")}${esc(e.sport)}</span><span class="o">${esc(meet ? (e.opp || "TBA") : oppLine(e))}</span><span class="${r ? "r " + rc : "o"}">${esc(r || e.time || "Time TBA")}</span></div>`;
+  }).join("")}</div>` : `<p class="empty">No events found for Oct 21–27.</p>`;
+
+  const genders = ["Men", "Women", "Coed"].map(g => {
+    const list = (d.sports || []).filter(x => x.g === g);
+    if (!list.length) return "";
+    const groups = GROUPS.map(grp => {
+      const items = list.filter(grp.test);
+      if (!items.length) return "";
+      return `<div class="group"><h3>${grp.title}</h3><p class="lede">${grp.lede}</p><div class="grid">${items.map(grp.render).join("")}</div></div>`;
+    }).join("");
+    return `<section class="gender-block"><h2 class="gh">${g === "Coed" ? "Coed & combined" : g + "'s sports"}</h2>${groups}</section>`;
+  }).join("");
+
+  const srcs = (d.sports || []).filter(x => x.source).map(x => `<li><a href="${esc(x.source)}" target="_blank" rel="noopener">${esc(x.g === "Coed" ? "" : x.g + "'s ")}${esc(x.name)}</a></li>`).join("");
+  const unv = (d.unverified || []).map(u => `<li>${esc(u)}</li>`).join("");
+
+  box.innerHTML = `
+    <div class="band"><div><h2>${esc(d.school)} ${esc(d.nickname || "")}</h2></div>
+      <div class="facts"><span><b>${recStr(dp.w, dp.l, dp.t)}</b>in season</span><span><b>${pctStr(dp.pct)}</b>pct</span><span><b>${dp.titles}</b>Big 12 titles 25–26</span></div></div>
+    <div><h2 class="sec">This week</h2><p class="lede">Wed Oct 21 – Tue Oct 27, every sport.</p>${weekHtml}</div>
+    ${genders}
+    ${tl.length ? `<div><h2 class="sec">2025–26 Big 12 titles</h2><ul class="titles">${tl.map(t => `<li>${esc(t.g === "Coed" ? "" : t.g + "'s ")}${esc(t.sport)} · ${esc(t.type)}${t.champions.length > 1 ? " (shared)" : ""}</li>`).join("")}</ul></div>` : ""}
+    ${unv ? `<details><summary>Couldn't confirm (${(d.unverified || []).length})</summary><ul>${unv}</ul></details>` : ""}
+    ${srcs ? `<details><summary>Sources for ${esc(d.school)}</summary><ul>${srcs}</ul></details>` : ""}`;
+}
+
+function renderAll() {
+  const asof = state.info?.asOf;
+  document.getElementById("asof").textContent = asof
+    ? "Updated · " + new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/Chicago", timeZoneName: "short" }).format(new Date(asof))
+    : "No data yet";
+  renderScorecard(); renderPicker(); renderSchool();
+}
+
+function select(id, scroll) {
+  if (!BY_ID[id]) return;
+  state.sel = id;
+  try { history.replaceState(null, "", "#" + id); } catch (e) {}
+  renderScorecard(); renderPicker(); renderSchool();
+  if (scroll) document.getElementById("school").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+document.addEventListener("click", e => {
+  const sc = e.target.closest("[data-scope]");
+  if (sc) { state.scope = sc.dataset.scope; renderScorecard(); renderSchool(); return; }
+  const sb = e.target.closest("[data-sort]");
+  if (sb) {
+    const k = sb.dataset.sort;
+    if (state.sortKey === k) state.sortDir = state.sortDir === "desc" ? "asc" : "desc";
+    else { state.sortKey = k; state.sortDir = k === "name" ? "asc" : "desc"; }
+    renderScorecard(); return;
+  }
+  const row = e.target.closest("tr[data-id]");
+  if (row) { select(row.dataset.id, true); return; }
+  const pb = e.target.closest("#picker button[data-id]");
+  if (pb) select(pb.dataset.id, false);
+});
+document.addEventListener("keydown", e => {
+  const row = e.target.closest && e.target.closest("tr[data-id]");
+  if (row && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); select(row.dataset.id, true); }
+});
+
+state.sel = BY_ID[location.hash.slice(1)] ? location.hash.slice(1) : "tcu";
+renderAll();
+
+async function load() {
+  try {
+    const [a, t] = await Promise.all([
+      fetch("/api/schools", { cache: "no-cache" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
+      fetch("/titles.json").then(r => r.ok ? r.json() : null).catch(() => null)
+    ]);
+    state.data = Object.fromEntries(a.schools.map(s => [s.id, s]));
+    state.info = { asOf: a.asOf };
+    state.titles = t;
+    renderAll();
+  } catch (e) {
+    if (!Object.keys(state.data).length) {
+      document.getElementById("scorecard").innerHTML = `<div class="msg">Couldn't load the records right now. Reload to try again.</div>`;
+      document.getElementById("asof").textContent = "Data unavailable";
+    }
+  }
+}
+load();
+// Pick up the next refresh when someone comes back to the tab.
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") load(); });
+</script>
+</body>
+</html>

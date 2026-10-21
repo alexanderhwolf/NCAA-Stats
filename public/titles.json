@@ -1,0 +1,318 @@
+{
+ "year": "2025-26",
+ "titles": [
+  {
+   "sport": "Football",
+   "g": "Men",
+   "type": "Championship game",
+   "champions": [
+    "Texas Tech"
+   ],
+   "source": "https://en.wikipedia.org/wiki/2025_Big_12_Championship_Game"
+  },
+  {
+   "sport": "Soccer",
+   "g": "Women",
+   "type": "Regular season",
+   "champions": [
+    "TCU"
+   ],
+   "source": "https://www.soccerwire.com/news/tcu-claims-2nd-straight-big-12-regular-season-championship-after-win-over-houston/"
+  },
+  {
+   "sport": "Soccer",
+   "g": "Women",
+   "type": "Tournament",
+   "champions": [
+    "BYU"
+   ],
+   "source": "https://en.wikipedia.org/wiki/2025_Big_12_Conference_women%27s_soccer_tournament"
+  },
+  {
+   "sport": "Volleyball",
+   "g": "Women",
+   "type": "Regular season",
+   "champions": [
+    "Arizona State"
+   ],
+   "source": "https://thesundevils.com/news/2025/11/22/9-volleyball-wins-2025-big-12-championship"
+  },
+  {
+   "sport": "Cross Country",
+   "g": "Men",
+   "type": "Championship meet",
+   "champions": [
+    "Oklahoma State"
+   ],
+   "source": "https://www.watchathletics.com/page/7091/results-big-12-cross-country-championships-2025"
+  },
+  {
+   "sport": "Cross Country",
+   "g": "Women",
+   "type": "Championship meet",
+   "champions": [
+    "BYU"
+   ],
+   "source": "https://www.watchathletics.com/page/7091/results-big-12-cross-country-championships-2025"
+  },
+  {
+   "sport": "Basketball",
+   "g": "Men",
+   "type": "Regular season",
+   "champions": [
+    "Arizona"
+   ],
+   "source": "https://allsportstucson.com/2026/03/02/no-2-arizona-earns-first-outright-big-12-title-with-dominating-win-over-no-6-iowa-state/"
+  },
+  {
+   "sport": "Basketball",
+   "g": "Men",
+   "type": "Tournament",
+   "champions": [
+    "Arizona"
+   ],
+   "source": "https://secure-www.cbssports.com/college-basketball/news/big-12-tournament-2026-scores-results-bracket-arizona-champion/"
+  },
+  {
+   "sport": "Basketball",
+   "g": "Women",
+   "type": "Regular season",
+   "champions": [
+    "TCU"
+   ],
+   "source": "https://gofrogs.com/news/2026/2/25/womens-basketball-back-to-back-tcu-wins-second-straight-big-12-championship"
+  },
+  {
+   "sport": "Basketball",
+   "g": "Women",
+   "type": "Tournament",
+   "champions": [
+    "West Virginia"
+   ],
+   "source": "https://wvusports.com/news/2026/3/8/womens-basketball-west-virginia-captures-second-big-12-championship-title"
+  },
+  {
+   "sport": "Wrestling",
+   "g": "Men",
+   "type": "Championship meet",
+   "champions": [
+    "Oklahoma State"
+   ],
+   "source": "https://okstate.com/news/2026/3/7/cowboy-wrestling-wins-second-straight-big-12-championship"
+  },
+  {
+   "sport": "Gymnastics",
+   "g": "Women",
+   "type": "Regular season",
+   "champions": [
+    "Utah"
+   ],
+   "source": "https://utahutes.com/news/2026/3/1/no-12-utah-gymnastics-clinches-second-straight-big-12-regular-season-title"
+  },
+  {
+   "sport": "Gymnastics",
+   "g": "Women",
+   "type": "Championship meet",
+   "champions": [
+    "Utah"
+   ],
+   "source": "https://utahutes.com/news/2026/3/21/no-12-utah-gymnastics-claims-big-12-championship"
+  },
+  {
+   "sport": "Swimming & Diving",
+   "g": "Men",
+   "type": "Championship meet",
+   "champions": [
+    "Arizona State"
+   ],
+   "source": "https://swimswam.com/2026-big-12-mens-and-womensswimming-and-diving-championship-box-score/"
+  },
+  {
+   "sport": "Swimming & Diving",
+   "g": "Women",
+   "type": "Championship meet",
+   "champions": [
+    "Arizona State"
+   ],
+   "source": "https://swimswam.com/2026-big-12-mens-and-womensswimming-and-diving-championship-box-score/"
+  },
+  {
+   "sport": "Indoor Track & Field",
+   "g": "Men",
+   "type": "Championship meet",
+   "champions": [
+    "Texas Tech"
+   ],
+   "source": "https://texastech.com/news/2026/3/1/track-and-field-red-raiders-sweep-big-12-indoor-titles"
+  },
+  {
+   "sport": "Indoor Track & Field",
+   "g": "Women",
+   "type": "Championship meet",
+   "champions": [
+    "Texas Tech"
+   ],
+   "source": "https://texastech.com/news/2026/3/1/track-and-field-red-raiders-sweep-big-12-indoor-titles"
+  },
+  {
+   "sport": "Outdoor Track & Field",
+   "g": "Men",
+   "type": "Championship meet",
+   "champions": [
+    "Texas Tech"
+   ],
+   "source": "https://texastech.com/news/2026/5/17/track-and-field-texas-tech-sweeps-big-12-outdoor-titles"
+  },
+  {
+   "sport": "Outdoor Track & Field",
+   "g": "Women",
+   "type": "Championship meet",
+   "champions": [
+    "Texas Tech"
+   ],
+   "source": "https://texastech.com/news/2026/5/17/track-and-field-texas-tech-sweeps-big-12-outdoor-titles"
+  },
+  {
+   "sport": "Equestrian",
+   "g": "Women",
+   "type": "Tournament",
+   "champions": [
+    "Oklahoma State"
+   ],
+   "source": "https://okstate.com/news/2026/3/28/cowgirl-equestrian-wins-sixth-consecutive-big-12-championship"
+  },
+  {
+   "sport": "Lacrosse",
+   "g": "Women",
+   "type": "Regular season",
+   "champions": [
+    "Florida"
+   ],
+   "source": "https://www.wruf.com/headlines/2026/04/25/florida-lacrosse-outright-big-12-regular-season-champs/"
+  },
+  {
+   "sport": "Lacrosse",
+   "g": "Women",
+   "type": "Tournament",
+   "champions": [
+    "Colorado"
+   ],
+   "source": "https://cubuffs.com/news/2026/5/2/lacrosse-buffs-win-first-ever-big-12-tournament-championship"
+  },
+  {
+   "sport": "Rowing",
+   "g": "Women",
+   "type": "Championship meet",
+   "champions": [
+    "UCF"
+   ],
+   "source": "https://www.kstatesports.com/news/2026/5/24/rowing-finishes-2026-season-in-big-12-championship-with-a-bronze-medal"
+  },
+  {
+   "sport": "Beach Volleyball",
+   "g": "Women",
+   "type": "Tournament",
+   "champions": [
+    "Florida State"
+   ],
+   "source": "https://seminoles.com/news/2026/4/24/womens-beach-volleyball-beach-volleyball-wins-big-12-championship"
+  },
+  {
+   "sport": "Baseball",
+   "g": "Men",
+   "type": "Regular season",
+   "champions": [
+    "Kansas"
+   ],
+   "source": "https://www2.kusports.com/sports/college/baseball/2026/may/15/ku-baseball-wins-big-12-title/"
+  },
+  {
+   "sport": "Baseball",
+   "g": "Men",
+   "type": "Tournament",
+   "champions": [
+    "Kansas"
+   ],
+   "source": "https://wibw.com/2026/05/24/kansas-wins-first-big-12-baseball-tournament-title-since-2006/"
+  },
+  {
+   "sport": "Softball",
+   "g": "Women",
+   "type": "Regular season",
+   "champions": [
+    "Texas Tech"
+   ],
+   "source": "https://en.wikipedia.org/wiki/2026_Big_12_Conference_softball_tournament"
+  },
+  {
+   "sport": "Softball",
+   "g": "Women",
+   "type": "Tournament",
+   "champions": [
+    "Arizona State"
+   ],
+   "source": "https://en.wikipedia.org/wiki/2026_Big_12_Conference_softball_tournament"
+  },
+  {
+   "sport": "Golf",
+   "g": "Men",
+   "type": "Championship meet",
+   "champions": [
+    "Oklahoma State"
+   ],
+   "source": "https://okstate.com/news/2026/4/29/cowboy-golf-cowboys-make-history-at-big-12-championship"
+  },
+  {
+   "sport": "Golf",
+   "g": "Women",
+   "type": "Championship meet",
+   "champions": [
+    "Iowa State"
+   ],
+   "source": "https://cyclones.com/news/2026/4/25/womens-golf-your-cyclonitas-win-the-2026-big-12-championship"
+  },
+  {
+   "sport": "Tennis",
+   "g": "Men",
+   "type": "Regular season",
+   "champions": [
+    "Arizona"
+   ],
+   "source": "https://arizonawildcats.com/news/2026/4/13/mens-tennis-no-10-arizona-defeats-oklahoma-state-to-win-their-first-big-12-regular-season-championship.aspx"
+  },
+  {
+   "sport": "Tennis",
+   "g": "Men",
+   "type": "Tournament",
+   "champions": [
+    "TCU"
+   ],
+   "source": "https://gofrogs.com/news/2026/4/18/mens-tennis-tcu-settles-score-vs-arizona-wins-big-12-tournament-championship"
+  },
+  {
+   "sport": "Tennis",
+   "g": "Women",
+   "type": "Regular season",
+   "champions": [
+    "UCF",
+    "Arizona State"
+   ],
+   "source": "https://ucfknights.com/news/2026/6/4/season-in-review-womens-tennis"
+  },
+  {
+   "sport": "Tennis",
+   "g": "Women",
+   "type": "Tournament",
+   "champions": [
+    "TCU"
+   ],
+   "source": "https://gofrogs.com/news/2026/4/18/womens-tennis-tcu-takes-down-top-seed-ucf-captures-programs-first-big-12-tournament-championship"
+  }
+ ],
+ "unverified": [
+  "Football regular season: Texas Tech and BYU both finished 8-1 in conference; Big 12 awards the football title via the championship game and no source confirms a separate or shared regular-season champion",
+  "Beach Volleyball regular season: Florida State went 11-1 and was the No. 1 seed, but no source confirms a regular-season title",
+  "Acrobatics & Tumbling: could not confirm the Big 12 sponsors it or any result",
+  "2026-27 titles: none confirmed as of Oct 21, 2026 (fall championships not yet decided per available sources)"
+ ]
+}
