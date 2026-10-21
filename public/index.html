@@ -300,7 +300,8 @@ function recordTile(s) {
 
 function meetTile(s) {
   const off = s.status === "off";
-  const fin = (s.finishes || []);
+  // Most recent finish first.
+  const fin = (s.finishes || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || ""));
   const list = fin.length ? `<ol class="fin">${fin.map(f => {
     const top = /^(T-)?(1st|2nd|3rd)\b/i.test(f.place || "");
     return `<li><span class="place${f.place ? (top ? " podium" : "") : " na"}">${esc(f.place || "—")}</span><span class="e">${esc(f.event)}</span><span class="dt">${esc(fmtD(f.date))}</span></li>`;

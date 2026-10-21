@@ -278,7 +278,8 @@ function tile(s) {
   const next = s.next ? `<p class="line"><b>${off ? "Opens" : "Next"}</b>${esc(s.kind === "meet" ? (s.next.opp || "TBA") : vsAt(s.next))}, ${esc(fmtD(s.next.date))}</p>` : "";
   const note = s.notes ? `<p class="note">${esc(s.notes)}</p>` : "";
   if (s.kind === "meet") {
-    const fin = s.finishes || [];
+    // Most recent finish first.
+    const fin = (s.finishes || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || ""));
     const list = fin.length ? `<ol class="fin">${fin.map(f => {
       const top = /^(T-)?(1st|2nd|3rd)\b/i.test(f.place || "");
       return `<li><span class="p${f.place ? (top ? " top" : "") : " na"}">${esc(f.place || "no place posted")}</span><span>${esc(f.event)}</span><span class="dt">${esc(fmtD(f.date))}</span></li>`;
