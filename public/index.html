@@ -100,6 +100,23 @@ table.sched { width: 100%; border-collapse: collapse; font-family: var(--mono); 
 .sched tr.sel td { background: var(--sel); font-weight: 600; }
 .sched tr.sel td:first-child { background: #e4ded2; }
 
+.nmcell { display: flex; align-items: center; gap: 6px; }
+.dag { color: var(--red); font-family: var(--mono); font-size: 13px; }
+.info { flex: none; width: 24px; height: 24px; margin-left: auto; border: 1px solid var(--ink); border-radius: 50%; background: var(--sheet); font-family: var(--tight); font-style: italic; font-weight: 700; font-size: 13px; line-height: 1; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; position: relative; }
+.info::after { content: ""; position: absolute; inset: -10px; }
+.info[aria-expanded="true"] { background: var(--ink); color: var(--sheet); }
+.sched td:first-child .info { width: 24px; height: 24px; min-height: 0; padding: 0; border: 1px solid var(--ink); border-radius: 50%; background: var(--sheet); font-family: var(--tight); font-style: italic; font-weight: 700; font-size: 13px; text-align: center; }
+.sched td:first-child .info[aria-expanded="true"] { background: var(--ink); color: var(--sheet); }
+.howbox, .bd { font-family: var(--narrow); font-size: 13.5px; line-height: 1.45; text-align: left; white-space: normal; }
+.howbox { border: 1px solid var(--ink); background: var(--sheet); padding: 6px 14px; margin-bottom: 10px; }
+.howbox p { margin: 8px 0; }
+.sched tr.exp td { background: var(--sheet); padding: 8px 12px 10px; text-align: left; font-weight: 400; }
+.bd ul { margin: 2px 0 6px; padding-left: 18px; columns: 2 220px; column-gap: 20px; }
+.bd ul span { color: var(--muted); font-family: var(--mono); font-size: 12px; }
+.bd-h { margin: 4px 0 0; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--red); }
+.bd-n { margin: 6px 0 0; color: var(--muted); font-size: 12.5px; }
+.disc { margin: 8px 0 0; font-size: 13px; color: var(--muted); border-top: 1px dashed var(--hair); padding-top: 8px; }
+
 /* Sequence (this week) */
 ol.seq { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--ink); }
 ol.seq li { display: grid; grid-template-columns: 34px 92px minmax(0, 1fr) auto; gap: 12px; align-items: center; border-bottom: 1px solid var(--hair); font-size: 14px; min-height: 40px; }
@@ -237,6 +254,7 @@ footer.small { font-size: 12px; color: var(--muted); border-top: 1px solid var(-
 </div>
 </div>
 
+<script src="/standings.js"></script>
 <script>
 const SCHOOLS = [
   { id: "arizona", name: "Arizona", short: "ARIZ", color: "#0C234B" },
@@ -259,7 +277,7 @@ const SCHOOLS = [
 const BY_ID = Object.fromEntries(SCHOOLS.map(s => [s.id, s]));
 const CODES = { "Football": "FB", "Basketball": "BB", "Volleyball": "VB", "Soccer": "SO", "Baseball": "BSB", "Softball": "SB", "Equestrian": "EQ", "Rifle": "RI", "Swimming & Diving": "SD", "Cross Country": "XC", "Track & Field": "TF", "Golf": "GO", "Tennis": "TN", "Triathlon": "TRI", "Beach Volleyball": "BVB", "Gymnastics": "GY", "Wrestling": "WR", "Lacrosse": "LAX", "Rowing": "RO", "Skiing": "SKI", "Acrobatics & Tumbling": "AT", "Ice Hockey": "IH", "Water Polo": "WP", "Cross Country & Track": "XCT" };
 
-const state = { data: {}, titles: null, asOf: null, sel: null, scope: "core", sortKey: "pct", sortDir: "desc" };
+const state = { data: {}, titles: null, asOf: null, sel: null, scope: "core", sortKey: "pct", sortDir: "desc", open: null };
 
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -285,12 +303,7 @@ function titlesFor(name) { return (state.titles?.titles || []).filter(t => (t.ch
 function dept(id, scope) {
   const d = state.data[id];
   if (!d) return null;
-  let w = 0, l = 0, t = 0, n = 0;
-  for (const s of d.sports || []) {
-    if (scope === "core" && !CORE(s)) continue;
-    if (s.status === "in" && s.kind === "h2h" && Number.isFinite(s.w) && Number.isFinite(s.l)) { w += s.w; l += s.l; t += s.t || 0; n++; }
-  }
-  return { w, l, t, n, pct: pct(w, l, t), titles: titlesFor(BY_ID[id].name).length };
+  return { ...B12.dept(d, scope), titles: titlesFor(BY_ID[id].name).length };
 }
 
 function renderIndex() {
@@ -298,27 +311,35 @@ function renderIndex() {
     `<button type="button" data-id="${s.id}" aria-pressed="${state.sel === s.id}" title="${esc(s.name)}">${esc(s.short)}</button>`).join("");
 }
 
+const infoBtn = (key, label) => `<button type="button" class="info" data-info="${key}" aria-expanded="${state.open === key}" aria-label="${esc(label)}">i</button>`;
+
 function renderSched() {
   const box = document.getElementById("sched");
   const rows = SCHOOLS.map(s => ({ s, d: dept(s.id, state.scope) })).filter(r => r.d);
   if (!rows.length) { box.innerHTML = `<div class="msg">No records yet. The board fills in within an hour of a fresh deploy.</div>`; return; }
   const k = state.sortKey, dir = state.sortDir === "desc" ? -1 : 1;
-  const val = r => k === "name" ? r.s.name : k === "w" ? r.d.w : k === "titles" ? r.d.titles : (r.d.pct ?? -1);
+  const val = r => k === "name" ? r.s.name : k === "w" ? r.d.w : k === "titles" ? r.d.titles : k === "adj" ? (r.d.adj ?? -1) : (r.d.pct ?? -1);
   rows.sort((a, b) => { const x = val(a), y = val(b); return x < y ? -dir : x > y ? dir : a.s.name.localeCompare(b.s.name); });
-  const th = (key, label) => `<th scope="col"><button type="button" data-sort="${key}" aria-sort="${k === key ? state.sortDir + "ending" : "none"}">${label}</button></th>`;
-  document.getElementById("sched-sub").textContent = state.scope === "core" ? "Football + volleyball + soccer · titles 2025–26" : "Every sport with a confirmed record · titles 2025–26";
+  const th = (key, label, cls = "") => `<th scope="col" class="${cls}"><button type="button" data-sort="${key}" aria-sort="${k === key ? state.sortDir + "ending" : "none"}">${label}</button></th>`;
+  document.getElementById("sched-sub").textContent = state.scope === "core" ? "Men's football + women's volleyball + women's soccer · titles 2025–26" : "Every men's and women's sport with a confirmed record · titles 2025–26";
+  const disc = B12.disclaimer(rows, state.scope, esc);
   box.innerHTML = `
-    <div class="seg" role="group" aria-label="Sports counted" style="margin-bottom: 10px">
-      <button type="button" data-scope="core" aria-pressed="${state.scope === "core"}">FB · VB · SOC</button>
-      <button type="button" data-scope="all" aria-pressed="${state.scope === "all"}">All sports</button>
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px">
+      <div class="seg" role="group" aria-label="Sports counted">
+        <button type="button" data-scope="core" aria-pressed="${state.scope === "core"}">FB · VB · SOC</button>
+        <button type="button" data-scope="all" aria-pressed="${state.scope === "all"}">All sports</button>
+      </div>
+      ${infoBtn("how", "How the standings are counted")}
     </div>
+    ${state.open === "how" ? `<div class="howbox">${B12.HOW}</div>` : ""}
     <div class="box"><table class="sched">
-      <thead><tr>${th("name", "Mark · school")}${th("w", "W")}<th scope="col" style="padding: 0 8px">L</th><th scope="col" style="padding: 0 8px">T</th>${th("pct", "Pct")}<th scope="col" class="hide-sm" style="padding: 0 8px">Spt</th>${th("titles", "Titles")}</tr></thead>
+      <thead><tr>${th("name", "Mark · school")}${th("w", "W", "hide-sm")}<th scope="col" class="hide-sm" style="padding: 0 8px">L</th><th scope="col" class="hide-sm" style="padding: 0 8px">T</th>${th("pct", "Pct")}${th("adj", "Adj.")}<th scope="col" class="hide-sm" style="padding: 0 8px">Spt</th>${th("titles", "Titles")}</tr></thead>
       <tbody>${rows.map((r, i) => `<tr class="${state.sel === r.s.id ? "sel" : ""}">
-        <td><button type="button" data-id="${r.s.id}"><span class="mk">D${String(i + 1).padStart(2, "0")}</span>${esc(r.s.name)}</button></td>
-        <td>${r.d.w}</td><td>${r.d.l}</td><td>${r.d.t}</td><td style="font-weight: 500">${pctStr(r.d.pct)}</td><td class="hide-sm">${r.d.n}</td><td>${r.d.titles}</td>
-      </tr>`).join("")}</tbody>
-    </table></div>`;
+        <td><span class="nmcell"><button type="button" data-id="${r.s.id}"><span class="mk">D${String(i + 1).padStart(2, "0")}</span>${esc(r.s.name)}</button>${state.scope === "core" && r.d.missing.length ? `<span class="dag" title="Not an equal comparison">†</span>` : ""}${infoBtn(r.s.id, "What counts for " + r.s.name)}</span></td>
+        <td class="hide-sm">${r.d.w}</td><td class="hide-sm">${r.d.l}</td><td class="hide-sm">${r.d.t}</td><td style="font-weight: 500">${pctStr(r.d.pct)}</td><td>${pctStr(r.d.adj)}</td><td class="hide-sm">${r.d.n}</td><td>${r.d.titles}</td>
+      </tr>${state.open === r.s.id ? `<tr class="exp"><td colspan="8">${B12.breakdown(r.d, esc)}</td></tr>` : ""}`).join("")}</tbody>
+    </table></div>
+    ${disc ? `<p class="disc">${disc}</p>` : ""}`;
 }
 
 function dimension(w, l, t) {
@@ -433,6 +454,8 @@ function select(id, scroll) {
 document.addEventListener("click", e => {
   const sc = e.target.closest("[data-scope]");
   if (sc) { state.scope = sc.dataset.scope; renderSched(); return; }
+  const inf = e.target.closest("[data-info]");
+  if (inf) { state.open = state.open === inf.dataset.info ? null : inf.dataset.info; renderSched(); return; }
   const so = e.target.closest("[data-sort]");
   if (so) {
     const k = so.dataset.sort;
