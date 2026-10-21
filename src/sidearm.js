@@ -157,3 +157,61 @@ export function mergeRounds(events) {
   return out;
 }
 const dayGap = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 86_400_000);
+
+// ---------------------------------------------------------------------------------------
+// The regular schedule page (/sports/<slug>/schedule). Its text-only twin leaves meet
+// placings out, but on TCU's page template each event carries a screen-reader heading:
+//   "Completed Event: Cross Country at Arturo Barrios Invitational on October 16, 2026 , , M: 10th | W: 19th"
+//   "Completed Event: Women's Golf versus Jim West Challenge on October 19, 2026 , , 1st/11"
+//   "Completed Event: Triathlon at Navy Collegiate Cup on October 4, 2026 , , 1st Place (286 Points)"
+// Other templates (Baylor, BYU) have no such headings; then this returns no events.
+const MONTHS_LONG = { january: 1, february: 2, march: 3, april: 4, may: 5, june: 6, july: 7, august: 8, september: 9, october: 10, november: 11, december: 12 };
+
+function normPlace(s) {
+  s = String(s || "").trim();
+  const m = s.match(/^(T-?)?(\d{1,2})(st|nd|rd|th)\b(?:\s*(?:place)?\s*(?:\/|of)\s*(\d{1,3}))?/i);
+  return m ? `${m[1] ? "T-" : ""}${m[2]}${m[3].toLowerCase()}${m[4] ? " of " + m[4] : ""}` : null;
+}
+
+export function parseRegular(html) {
+  const out = { events: [], headings: 0 };
+  const re = /<h3 class="sr-only"[^>]*>([\s\S]*?)<\/h3>/g;
+  let m;
+  while ((m = re.exec(String(html || "")))) {
+    out.headings++;
+    const t = text(m[1].replace(/<!--[\s\S]*?-->/g, ""));
+    const h = t.match(/^Completed Event:\s*.+?\s(?:at|versus|vs\.?)\s(.+?)\son\s([A-Za-z]+)\s(\d{1,2}),\s(\d{4})\s*(.*)$/);
+    if (!h) continue;
+    const mo = MONTHS_LONG[h[2].toLowerCase()];
+    if (!mo) continue;
+    const date = `${h[4]}-${String(mo).padStart(2, "0")}-${String(+h[3]).padStart(2, "0")}`;
+    const rest = h[5].replace(/^[\s,]+/, "").trim();
+    const base = { date, opp: h[1].trim() };
+    if (/cancel|postpon/i.test(rest)) { out.events.push({ ...base, g: null, place: null, canceled: true }); continue; }
+    const mw = rest.match(/M:\s*([^|]+)\|\s*W:\s*(.+)$/i);
+    if (mw) {
+      out.events.push({ ...base, g: "Men", place: normPlace(mw[1]) });
+      out.events.push({ ...base, g: "Women", place: normPlace(mw[2]) });
+    } else {
+      const p = normPlace(rest);
+      if (p) out.events.push({ ...base, g: null, place: p });
+    }
+  }
+  return out;
+}
+
+// Fill placings into a meet sport's text-page events from regular-page events: same date
+// (or within a multi-day event's span) and the same gender when the page splits them.
+// For multi-round events the latest round's standing is the finish.
+export function mergePlacings(events, reg, g) {
+  if (!reg?.length) return events;
+  return events.map(e => {
+    if (e.place || e.result) return e;
+    const end = e.end || e.date;
+    const hits = reg.filter(r => r.date >= e.date && r.date <= end && (!r.g || g === "Coed" || r.g === g));
+    if (!hits.length) return e;
+    const last = hits.sort((a, b) => a.date.localeCompare(b.date)).at(-1);
+    if (last.canceled) return { ...e, canceled: true };
+    return { ...e, place: last.place, placeFrom: "schedule page" };
+  });
+}

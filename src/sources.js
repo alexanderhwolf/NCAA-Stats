@@ -35,6 +35,13 @@ export function sourcesFor(today) {
             key: `${s.id}|site|${sp.slug}|${phase}`, school: s.id, layer: "site", ref: sp.slug, phase, ttl,
             url: `https://${s.domain}/sports/${sp.slug}/schedule/text/${sidearmSeason(fam, y)}`, Y: y, fam,
           });
+          // Meet sports: the regular schedule page carries the placings (src/sidearm.js parseRegular).
+          if (sp.kind === "meet" && phase === "cur") {
+            out.push({
+              key: `${s.id}|reg|${sp.slug}|cur`, school: s.id, layer: "site", ref: sp.slug, phase, ttl, reg: true,
+              url: `https://${s.domain}/sports/${sp.slug}/schedule`, Y: y, fam,
+            });
+          }
         }
       }
     }

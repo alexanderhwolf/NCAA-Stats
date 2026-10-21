@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Win-loss records, meet finishes and this week's schedule for every sport at all 16 Big 12 schools.">
+<meta name="color-scheme" content="light">
+<title>Big 12 Records Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;500;600;700&family=Inter+Tight:wght@200;300;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* "Drawing Set": the board as an architect's sheet. Off-white sheet, hairline ink, red-orange
+   annotations, a gray title block on the right (on top on phones). */
+:root {
+  --desk: #cfcfcb;
+  --sheet: #fbfbf9;
+  --panel: #ececea;   /* gray kept for headers, label columns */
+  --block: #e3e3e0;   /* title block */
+  --ink: #1e1e1e;
+  --muted: #4a4a46;
+  --hair: #9a9a95;
+  --hair-2: #c9c9c4;
+  --red: #c9391b;     /* annotation text, passes 4.5:1 on all grounds */
+  --red-hi: #e2471c;  /* large marks only */
+  --sel: #f1eee8;
+  --narrow: "Archivo Narrow", "Arial Narrow", sans-serif;
+  --tight: "Inter Tight", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+* { box-sizing: border-box; }
+html { color-scheme: light; }
+body { margin: 0; background: var(--desk); color: var(--ink); font-family: var(--narrow); font-size: 15px; line-height: 1.4; }
+button { font: inherit; color: inherit; }
+a { color: var(--red); }
+a:hover { color: #8f2510; }
+:focus-visible { outline: 2px solid var(--red-hi); outline-offset: 2px; }
+
+.desk { padding: 24px max(14px, env(safe-area-inset-right, 0px)) 48px max(14px, env(safe-area-inset-left, 0px)); }
+.sheet { max-width: 1240px; margin: 0 auto; background: var(--sheet); box-shadow: 0 1px 0 #b9b9b4, 0 18px 40px rgba(0,0,0,.12); display: flex; flex-wrap: wrap-reverse; }
+main { flex: 999 1 640px; min-width: 0; padding: 30px 34px 40px; display: flex; flex-direction: column; gap: 36px; }
+
+/* Title block */
+.tb { flex: 1 1 250px; min-width: 0; background: var(--block); border-left: 1px solid var(--ink); display: flex; flex-direction: column; }
+.tb-top { display: flex; justify-content: space-between; align-items: flex-start; padding: 22px 20px 0; }
+.tb-logo { border: 2px solid var(--red-hi); color: var(--red-hi); padding: 4px 6px; font-family: var(--tight); font-weight: 700; font-size: 18px; line-height: .95; text-align: center; }
+.tb-logo small { display: block; font-size: 8px; font-weight: 500; letter-spacing: .1em; }
+.tb h1 { margin: 0; writing-mode: vertical-rl; transform: rotate(180deg); font-family: var(--tight); font-weight: 500; font-size: 64px; line-height: .85; letter-spacing: -.02em; height: 290px; }
+.tb h1 span { font-size: 18px; letter-spacing: 0; }
+.tb-body { padding: 0 20px; display: flex; flex-direction: column; }
+.tb-row { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; padding: 6px 0; border-top: 1px solid var(--ink); }
+.tb-row b { font-family: var(--mono); font-weight: 400; }
+.stamp-wrap { display: flex; justify-content: center; padding: 20px 0; }
+.stamp { width: 118px; height: 118px; border: 1.5px solid var(--red-hi); border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background-image: linear-gradient(var(--red-hi), var(--red-hi)), linear-gradient(var(--red-hi), var(--red-hi)); background-size: 100% 1px, 1px 100%; background-position: center; background-repeat: no-repeat; }
+.stamp span { background: var(--block); padding: 2px 4px; font-family: var(--mono); font-size: 18px; }
+.rev { display: flex; gap: 14px; padding: 10px 0 14px; border-top: 1px solid var(--ink); }
+.rev p { margin: 0; writing-mode: vertical-rl; transform: rotate(180deg); color: var(--red); font-weight: 700; font-size: 16px; letter-spacing: .08em; text-transform: uppercase; }
+.rev ol { margin: 0; padding: 0; list-style: none; flex: 1; font-family: var(--mono); font-size: 11px; }
+.rev li { border-bottom: 1px solid #b4b4af; padding: 5px 0; }
+.notes { margin: 0 0 12px; padding-left: 16px; font-size: 12px; line-height: 1.45; display: grid; gap: 3px; }
+.tb-school { margin: 10px 0 0; font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.tb-school i { width: 12px; height: 12px; flex: none; }
+.tb-totals { margin: 0; font-size: 13px; color: var(--muted); }
+.tb-foot { margin-top: auto; padding: 22px 20px 18px; }
+.tb-no { margin: 0; font-family: var(--tight); font-weight: 300; font-size: 72px; line-height: .9; letter-spacing: -.03em; }
+
+/* Section headers: detail bubble + underlined title */
+.det { display: flex; flex-direction: column; gap: 12px; scroll-margin-top: 12px; }
+.det-h { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.bubble { width: 40px; height: 40px; border: 1.5px solid var(--red); border-radius: 50%; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; font-family: var(--mono); font-size: 10px; line-height: 1.1; color: var(--red); flex: none; }
+.bubble b { font-weight: 400; border-bottom: 1px solid var(--red); padding: 0 6px; }
+.det-h h2 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; border-bottom: 2px solid var(--ink); padding-bottom: 2px; }
+.det-h .sub { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.label { font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+
+/* Sheet index (school picker) */
+.index { display: flex; flex-wrap: wrap; border-left: 1px solid var(--ink); border-top: 1px solid var(--ink); }
+.index button { flex: 1 0 auto; min-width: 54px; min-height: 44px; padding: 0 8px; border: 0; border-right: 1px solid var(--ink); border-bottom: 1px solid var(--ink); background: transparent; font-family: var(--mono); font-size: 12px; cursor: pointer; }
+.index button[aria-pressed="true"] { background: var(--ink); color: var(--sheet); }
+.index button:hover:not([aria-pressed="true"]) { background: var(--panel); }
+
+/* Department schedule */
+.seg { display: inline-flex; border: 1px solid var(--ink); }
+.seg button { min-height: 36px; padding: 0 12px; border: 0; background: transparent; font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--ink); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--sheet); }
+.box { overflow-x: auto; }
+table.sched { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.sched th { background: var(--panel); font-family: var(--narrow); font-weight: 600; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--red); text-align: right; padding: 0; border: 1px solid var(--ink); white-space: nowrap; }
+.sched th button { width: 100%; min-height: 32px; padding: 0 8px; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: inherit; cursor: pointer; }
+.sched th button[aria-sort="descending"]::after { content: " ▾"; }
+.sched th button[aria-sort="ascending"]::after { content: " ▴"; }
+.sched td { padding: 6px 8px; border: 1px solid var(--hair); text-align: right; white-space: nowrap; }
+.sched th:first-child, .sched td:first-child { text-align: left; }
+.sched td:first-child { background: var(--panel); font-family: var(--narrow); font-size: 14px; font-weight: 600; white-space: normal; }
+.sched td:first-child button { border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: left; min-height: 28px; }
+.sched td:first-child button:hover { color: var(--red); }
+.sched .mk { font-family: var(--mono); font-weight: 400; font-size: 11px; color: var(--muted); margin-right: 8px; }
+.sched tr.sel td { background: var(--sel); font-weight: 600; }
+.sched tr.sel td:first-child { background: #e4ded2; }
+
+.nmcell { display: flex; align-items: center; gap: 6px; }
+.dag { color: var(--red); font-family: var(--mono); font-size: 13px; }
+.info { flex: none; width: 24px; height: 24px; margin-left: auto; border: 1px solid var(--ink); border-radius: 50%; background: var(--sheet); font-family: var(--tight); font-style: italic; font-weight: 700; font-size: 13px; line-height: 1; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; position: relative; }
+.info::after { content: ""; position: absolute; inset: -10px; }
+.info[aria-expanded="true"] { background: var(--ink); color: var(--sheet); }
+.sched td:first-child .info { width: 24px; height: 24px; min-height: 0; padding: 0; border: 1px solid var(--ink); border-radius: 50%; background: var(--sheet); font-family: var(--tight); font-style: italic; font-weight: 700; font-size: 13px; text-align: center; }
+.sched td:first-child .info[aria-expanded="true"] { background: var(--ink); color: var(--sheet); }
+.howbox, .bd { font-family: var(--narrow); font-size: 13.5px; line-height: 1.45; text-align: left; white-space: normal; }
+.howbox { border: 1px solid var(--ink); background: var(--sheet); padding: 6px 14px; margin-bottom: 10px; }
+.howbox p { margin: 8px 0; }
+.sched tr.exp td { background: var(--sheet); padding: 8px 12px 10px; text-align: left; font-weight: 400; }
+.bd ul { margin: 2px 0 6px; padding-left: 18px; columns: 2 220px; column-gap: 20px; }
+.bd ul span { color: var(--muted); font-family: var(--mono); font-size: 12px; }
+.bd-h { margin: 4px 0 0; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--red); }
+.bd-n { margin: 6px 0 0; color: var(--muted); font-size: 12.5px; }
+.disc { margin: 8px 0 0; font-size: 13px; color: var(--muted); border-top: 1px dashed var(--hair); padding-top: 8px; }
+
+/* Sequence (this week) */
+ol.seq { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--ink); }
+ol.seq li { display: grid; grid-template-columns: 34px 92px minmax(0, 1fr) auto; gap: 12px; align-items: center; border-bottom: 1px solid var(--hair); font-size: 14px; min-height: 40px; }
+.diamond { width: 22px; height: 22px; border: 1px solid var(--ink); display: inline-flex; align-items: center; justify-content: center; transform: rotate(45deg); margin-left: 6px; }
+.diamond span { transform: rotate(-45deg); font-family: var(--mono); font-size: 10.5px; }
+.seq .day { font-family: var(--mono); font-size: 12px; background: var(--panel); align-self: stretch; display: flex; align-items: center; padding: 0 8px; }
+.seq b { text-transform: uppercase; letter-spacing: .04em; }
+.seq .tm { font-family: var(--mono); font-size: 12px; color: var(--red); padding-right: 2px; }
+.empty { color: var(--muted); font-size: 14px; margin: 0; }
+
+/* Detail cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); border-top: 1px solid var(--ink); border-left: 1px solid var(--ink); }
+.card { border-right: 1px solid var(--ink); border-bottom: 1px solid var(--ink); padding: 16px 18px 20px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.card.off { background: #f6f6f3; }
+.card-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.card-h h3 { margin: 0; font-size: 14px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.code { font-family: var(--mono); font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+.code.final { color: var(--red); }
+.rec-row { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+.rec { margin: 0; font-family: var(--tight); font-weight: 200; font-size: 62px; line-height: .95; letter-spacing: -.03em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rec.none { font-size: 22px; font-weight: 300; letter-spacing: 0; color: var(--muted); white-space: normal; }
+ul.call { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 7px; flex: 1 1 140px; min-width: 0; }
+ul.call li { display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--red); }
+ul.call li::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--red); flex: none; }
+ul.call li::after { content: ""; order: -1; }
+ul.call .ld { width: 16px; border-top: 1px solid var(--red); flex: none; }
+.dim { display: flex; flex-direction: column; gap: 3px; }
+.dim-bar { display: flex; height: 9px; align-items: center; }
+.dim-bar i { display: block; height: 9px; }
+.dim-bar .w { border-left: 1px solid var(--ink); border-right: 1px solid var(--ink); background: linear-gradient(var(--ink), var(--ink)) center / 100% 1px no-repeat; }
+.dim-bar .l { border-right: 1px solid var(--red); background: linear-gradient(var(--red), var(--red)) center / 100% 1px no-repeat; }
+.dim-bar .t { border-right: 1px solid var(--muted); background: repeating-linear-gradient(90deg, var(--muted) 0 3px, transparent 3px 6px) center / 100% 1px no-repeat; }
+.dim-lab { display: flex; font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+.dim-lab span { text-align: center; white-space: nowrap; overflow: hidden; }
+.dim-lab .l { color: var(--red); }
+.line { margin: 0; font-size: 13px; line-height: 1.4; }
+.line b { letter-spacing: .06em; text-transform: uppercase; font-size: 11px; margin-right: 6px; }
+ol.fin { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--hair-2); }
+ol.fin li { display: grid; grid-template-columns: 62px minmax(0,1fr) auto; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--hair-2); font-size: 13px; align-items: baseline; }
+.fin .pl { font-family: var(--tight); font-weight: 500; font-size: 16px; }
+.fin .pl.top { color: var(--red); }
+.fin .pl.na { font-family: var(--mono); font-size: 11px; color: var(--muted); font-weight: 400; }
+.fin .dt { font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; }
+.note { margin: 0; font-size: 12px; color: var(--muted); border-top: 1px dashed var(--hair); padding-top: 6px; }
+
+details.misc { border: 1px solid var(--ink); background: var(--panel); padding: 10px 14px; font-size: 13px; }
+details.misc summary { cursor: pointer; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; font-size: 12px; min-height: 28px; display: flex; align-items: center; }
+details.misc ul { margin: 8px 0 0; padding-left: 18px; columns: 2 260px; column-gap: 24px; }
+footer.small { font-size: 12px; color: var(--muted); border-top: 1px solid var(--ink); padding-top: 10px; }
+.msg { border: 1px solid var(--ink); background: var(--panel); padding: 16px; font-size: 14px; }
+
+.sm-only { display: none; }
+@media (max-width: 640px) {
+  main { padding: 22px 16px 32px; gap: 30px; }
+  .tb { border-left: 0; border-bottom: 1px solid var(--ink); }
+  .tb-top { align-items: center; padding: 16px 16px 0; }
+  .tb h1 { writing-mode: horizontal-tb; transform: none; height: auto; font-size: 40px; }
+  .tb h1 span { font-size: 15px; margin-right: 4px; }
+  .tb-body { padding: 0 16px; }
+  .lg-only { display: none !important; }
+  .sm-only { display: block; }
+  .tb-foot { padding: 6px 16px 14px; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .tb-foot .tb-row { display: none; }
+  .tb-no { font-size: 44px; }
+  .sched .hide-sm { display: none; }
+  .rec { font-size: 48px; }
+  .rec-row { flex-direction: column; gap: 4px; }
+  ul.call { margin-top: 2px; }
+  ol.seq li { grid-template-columns: 30px 78px minmax(0, 1fr); }
+  ol.seq .tm { grid-column: 3; padding-bottom: 6px; margin-top: -6px; }
+  .cards { grid-template-columns: minmax(0, 1fr); }
+  .index button { min-width: 0; flex: 1 0 22%; }
+}
+</style>
+</head>
+<body>
+<div class="desk">
+<div class="sheet">
+  <main id="main">
+    <nav class="det" aria-label="Sheet index: choose a school">
+      <span class="label">Sheet index</span>
+      <div class="index" id="index"></div>
+    </nav>
+
+    <section class="det" aria-labelledby="h-sched">
+      <div class="det-h">
+        <span class="bubble" aria-hidden="true"><b>1</b>B12</span>
+        <h2 id="h-sched">Department schedule</h2>
+        <span class="sub" id="sched-sub">Football + volleyball + soccer · titles 2025–26</span>
+      </div>
+      <div id="sched"><div class="msg">Loading…</div></div>
+    </section>
+
+    <div id="school" style="display: contents"></div>
+
+    <footer class="small">
+      Unofficial fan board; not affiliated with the Big 12 or any school. Football, basketball, volleyball, soccer, baseball and softball come from ESPN; every other sport comes from the school's own athletics site. Anything that couldn't be loaded is listed under the school, never guessed.
+      <br><a href="/" class="alt">Main board</a> · <a href="/night.html" class="alt">Night Game look</a>
+    </footer>
+  </main>
+
+  <aside class="tb" aria-label="Title block" id="tb">
+    <div class="tb-top">
+      <div class="tb-logo" aria-hidden="true">B12<small>RECORDS</small></div>
+      <h1><span>the</span>BIG 12</h1>
+    </div>
+    <div class="tb-body">
+      <div class="tb-row" style="border-top: 0; padding-top: 14px; border-bottom: 1px solid var(--ink)"><span>Project</span><b id="tb-project">—</b></div>
+      <div class="lg-only stamp-wrap"><div class="stamp" id="tb-stamp" role="img" aria-label="Last updated"><span id="tb-date">—</span></div></div>
+      <div class="lg-only tb-row"><span>Revisions</span></div>
+      <div class="lg-only rev">
+        <p>Issued for game day</p>
+        <ol id="tb-rev"><li>Loading…</li></ol>
+      </div>
+      <div class="lg-only tb-row" style="border-bottom: 0"><span>Notes</span></div>
+      <ol class="lg-only notes">
+        <li>Records shown to the latest posted result.</li>
+        <li>Exhibitions not counted.</li>
+        <li>Department schedule: football, volleyball, soccer unless "all sports" is chosen.</li>
+        <li>Refreshed automatically every few hours.</li>
+      </ol>
+      <div class="lg-only tb-row" style="align-items: center"><span>North</span>
+        <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="15" fill="none" stroke="#1e1e1e"></circle><line x1="17" y1="4" x2="17" y2="30" stroke="#1e1e1e"></line><path d="M17 4 L21 13 L17 11 L13 13 Z" fill="#1e1e1e"></path></svg>
+      </div>
+      <div class="lg-only tb-row"><span>Scale</span><b>1 game = 1 game</b></div>
+      <p class="tb-school"><i id="tb-swatch" aria-hidden="true"></i><span id="tb-name">—</span></p>
+      <p class="tb-totals" id="tb-totals">&nbsp;</p>
+      <p class="tb-totals sm-only" id="tb-updated" style="font-family: var(--mono); font-size: 11px; margin-top: 4px">&nbsp;</p>
+    </div>
+    <div class="tb-foot">
+      <p class="tb-no" id="tb-no">—</p>
+      <div class="tb-row" style="margin-top: 8px"><span>No.</span><span>©2026</span></div>
+    </div>
+  </aside>
+</div>
+</div>
+
+<script src="/standings.js"></script>
+<script>
+const SCHOOLS = [
+  { id: "arizona", name: "Arizona", short: "ARIZ", color: "#0C234B" },
+  { id: "arizona-state", name: "Arizona State", short: "ASU", color: "#8C1D40" },
+  { id: "baylor", name: "Baylor", short: "BAY", color: "#154734" },
+  { id: "byu", name: "BYU", short: "BYU", color: "#002E5D" },
+  { id: "ucf", name: "UCF", short: "UCF", color: "#000000" },
+  { id: "cincinnati", name: "Cincinnati", short: "CIN", color: "#C8102E" },
+  { id: "colorado", name: "Colorado", short: "COLO", color: "#000000" },
+  { id: "houston", name: "Houston", short: "HOU", color: "#C8102E" },
+  { id: "iowa-state", name: "Iowa State", short: "ISU", color: "#9E1B32" },
+  { id: "kansas", name: "Kansas", short: "KU", color: "#0051BA" },
+  { id: "kansas-state", name: "Kansas State", short: "KSU", color: "#512888" },
+  { id: "oklahoma-state", name: "Oklahoma State", short: "OKST", color: "#FF7300" },
+  { id: "tcu", name: "TCU", short: "TCU", color: "#4D1979" },
+  { id: "texas-tech", name: "Texas Tech", short: "TTU", color: "#CC0000" },
+  { id: "utah", name: "Utah", short: "UTAH", color: "#BE0000" },
+  { id: "west-virginia", name: "West Virginia", short: "WVU", color: "#002855" }
+];
+const BY_ID = Object.fromEntries(SCHOOLS.map(s => [s.id, s]));
+const CODES = { "Football": "FB", "Basketball": "BB", "Volleyball": "VB", "Soccer": "SO", "Baseball": "BSB", "Softball": "SB", "Equestrian": "EQ", "Rifle": "RI", "Swimming & Diving": "SD", "Cross Country": "XC", "Track & Field": "TF", "Golf": "GO", "Tennis": "TN", "Triathlon": "TRI", "Beach Volleyball": "BVB", "Gymnastics": "GY", "Wrestling": "WR", "Lacrosse": "LAX", "Rowing": "RO", "Skiing": "SKI", "Acrobatics & Tumbling": "AT", "Ice Hockey": "IH", "Water Polo": "WP", "Cross Country & Track": "XCT" };
+
+const state = { data: {}, titles: null, asOf: null, sel: null, scope: "core", sortKey: "pct", sortDir: "desc", open: null };
+
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const DOW = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
+const parseD = s => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ""); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; };
+const fmtD = s => { const d = parseD(s); return d ? `${MON[d.getMonth()]} ${d.getDate()}` : ""; };
+const fmtDay = s => { const d = parseD(s); return d ? `${DOW[d.getDay()]} ${d.getMonth() + 1}.${String(d.getDate()).padStart(2, "0")}` : ""; };
+const dash = s => String(s ?? "").replace(/-/g, "–");
+// A named event (invitational, open, championship...) is a place to compete, not an opponent.
+const EVENT = /invitational|invite|open\b|classic|championship|challenge|challenger|regional|tournament|shootout|cup\b|\bitf\b|\bm25\b|\bw\d+\b|collegiate/i;
+const vsAt = x => !x ? "" : EVENT.test(x.opp || "") ? (x.opp || "") : `${x.at === "Away" ? "at" : "vs"} ${x.opp || "TBA"}${x.at === "Neutral" ? " (N)" : ""}`;
+// "7 p.m.", "7:00 PM CT", "11:00 a.m." all become "7:00 PM"; "TBA", "All Day" pass through.
+const fmtTime = t => {
+  const m = /(\d{1,2})(?::(\d{2}))?\s*([ap])\.?\s*m\.?/i.exec(t || "");
+  return m ? `${+m[1]}:${m[2] || "00"} ${m[3].toUpperCase()}M` : (t || "TBA").replace(/\s*C[DS]?T$/, "");
+};
+const pct = (w, l, t) => { const n = w + l + t; return n ? (w + t / 2) / n : null; };
+const pctStr = p => p == null ? "—" : p.toFixed(3).replace(/^0/, "");
+const recStr = (w, l, t) => `${w}–${l}${t ? "–" + t : ""}`;
+const CORE = s => (s.g === "Men" && s.name === "Football") || (s.g === "Women" && (s.name === "Volleyball" || s.name === "Soccer"));
+
+function titlesFor(name) { return (state.titles?.titles || []).filter(t => (t.champions || []).includes(name)); }
+function dept(id, scope) {
+  const d = state.data[id];
+  if (!d) return null;
+  return { ...B12.dept(d, scope), titles: titlesFor(BY_ID[id].name).length };
+}
+
+function renderIndex() {
+  document.getElementById("index").innerHTML = SCHOOLS.map(s =>
+    `<button type="button" data-id="${s.id}" aria-pressed="${state.sel === s.id}" title="${esc(s.name)}">${esc(s.short)}</button>`).join("");
+}
+
+const infoBtn = (key, label) => `<button type="button" class="info" data-info="${key}" aria-expanded="${state.open === key}" aria-label="${esc(label)}">i</button>`;
+
+function renderSched() {
+  const box = document.getElementById("sched");
+  const rows = SCHOOLS.map(s => ({ s, d: dept(s.id, state.scope) })).filter(r => r.d);
+  if (!rows.length) { box.innerHTML = `<div class="msg">No records yet. The board fills in within an hour of a fresh deploy.</div>`; return; }
+  const k = state.sortKey, dir = state.sortDir === "desc" ? -1 : 1;
+  const val = r => k === "name" ? r.s.name : k === "w" ? r.d.w : k === "titles" ? r.d.titles : k === "adj" ? (r.d.adj ?? -1) : (r.d.pct ?? -1);
+  rows.sort((a, b) => { const x = val(a), y = val(b); return x < y ? -dir : x > y ? dir : a.s.name.localeCompare(b.s.name); });
+  const th = (key, label, cls = "") => `<th scope="col" class="${cls}"><button type="button" data-sort="${key}" aria-sort="${k === key ? state.sortDir + "ending" : "none"}">${label}</button></th>`;
+  document.getElementById("sched-sub").textContent = state.scope === "core" ? "Men's football + women's volleyball + women's soccer · titles 2025–26" : "Every men's and women's sport with a confirmed record · titles 2025–26";
+  const disc = B12.disclaimer(rows, state.scope, esc);
+  box.innerHTML = `
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px">
+      <div class="seg" role="group" aria-label="Sports counted">
+        <button type="button" data-scope="core" aria-pressed="${state.scope === "core"}">FB · VB · SOC</button>
+        <button type="button" data-scope="all" aria-pressed="${state.scope === "all"}">All sports</button>
+      </div>
+      ${infoBtn("how", "How the standings are counted")}
+    </div>
+    ${state.open === "how" ? `<div class="howbox">${B12.HOW}</div>` : ""}
+    <div class="box"><table class="sched">
+      <thead><tr>${th("name", "Mark · school")}${th("w", "W", "hide-sm")}<th scope="col" class="hide-sm" style="padding: 0 8px">L</th><th scope="col" class="hide-sm" style="padding: 0 8px">T</th>${th("pct", "Pct")}${th("adj", "Adj.")}<th scope="col" class="hide-sm" style="padding: 0 8px">Spt</th>${th("titles", "Titles")}</tr></thead>
+      <tbody>${rows.map((r, i) => `<tr class="${state.sel === r.s.id ? "sel" : ""}">
+        <td><span class="nmcell"><button type="button" data-id="${r.s.id}"><span class="mk">D${String(i + 1).padStart(2, "0")}</span>${esc(r.s.name)}</button>${state.scope === "core" && r.d.missing.length ? `<span class="dag" title="Not an equal comparison">†</span>` : ""}${infoBtn(r.s.id, "What counts for " + r.s.name)}</span></td>
+        <td class="hide-sm">${r.d.w}</td><td class="hide-sm">${r.d.l}</td><td class="hide-sm">${r.d.t}</td><td style="font-weight: 500">${pctStr(r.d.pct)}</td><td>${pctStr(r.d.adj)}</td><td class="hide-sm">${r.d.n}</td><td>${r.d.titles}</td>
+      </tr>${state.open === r.s.id ? `<tr class="exp"><td colspan="8">${B12.breakdown(r.d, esc)}</td></tr>` : ""}`).join("")}</tbody>
+    </table></div>
+    ${disc ? `<p class="disc">${disc}</p>` : ""}`;
+}
+
+function dimension(w, l, t) {
+  const n = w + l + t;
+  if (!n) return "";
+  const p = x => (x / n * 100).toFixed(2) + "%";
+  const parts = [["w", w, `${w} W`], ["t", t, `${t} T`], ["l", l, `${l} L`]].filter(x => x[1] > 0);
+  return `<div class="dim" role="img" aria-label="${w} wins, ${l} losses${t ? ", " + t + " ties" : ""}">
+    <div class="dim-bar" aria-hidden="true">${parts.map(([c, v]) => `<i class="${c}" style="width:${p(v)}"></i>`).join("")}</div>
+    <div class="dim-lab" aria-hidden="true">${parts.map(([c, v, lab]) => `<span class="${c}" style="width:${p(v)}">${lab}</span>`).join("")}</div>
+  </div>`;
+}
+
+function card(s) {
+  const off = s.status !== "in";
+  const g = s.g === "Coed" ? "C" : s.g[0];
+  const code = `${g} · ${CODES[s.name] || s.name.slice(0, 3).toUpperCase()}${off ? (s.season ? " · " + s.season + " final" : " · off-season") : " · in season"}`;
+  const head = `<div class="card-h"><h3>${esc(s.name)}</h3><span class="code${off ? " final" : ""}">${esc(code)}</span></div>`;
+  const next = s.next ? `<p class="line"><b>${off ? "Opens" : "Next"}</b>${esc(s.kind === "meet" ? (s.next.opp || "TBA") : vsAt(s.next))} · ${esc(fmtD(s.next.date))}</p>` : "";
+  const note = s.notes ? `<p class="note">${esc(s.notes)}</p>` : "";
+  if (s.kind === "meet") {
+    const fin = s.finishes || [];
+    const list = fin.length ? `<ol class="fin">${fin.map(f => {
+      const top = /^(T-)?(1st|2nd|3rd)\b/i.test(f.place || "");
+      return `<li><span class="pl${f.place ? (top ? " top" : "") : " na"}">${esc(f.place || "no place")}</span><span>${esc(f.event)}</span><span class="dt">${esc(fmtD(f.date))}</span></li>`;
+    }).join("")}</ol>` : `<p class="rec none">${off ? "No W–L · meet sport" : "No posted finishes yet"}</p>`;
+    return `<article class="card${off ? " off" : ""}">${head}${list}${next}${note}</article>`;
+  }
+  const has = Number.isFinite(s.w) && Number.isFinite(s.l);
+  if (!has) return `<article class="card${off ? " off" : ""}">${head}<p class="rec none">Record not available</p>${next}${note}</article>`;
+  const t = s.t || 0;
+  const call = [];
+  if (s.conf) call.push(`Conf ${dash(s.conf)}`);
+  if (s.streak && !off) call.push(`Streak ${s.streak}`);
+  if (s.last && !off) call.push(`Last: ${dash(s.last.result || "")} ${vsAt(s.last)}`);
+  if (s.summary) call.push(s.summary);
+  return `<article class="card${off ? " off" : ""}">${head}
+    <div class="rec-row"><p class="rec">${recStr(s.w, s.l, t)}</p>
+      ${call.length ? `<ul class="call">${call.map(c => `<li><span class="ld" aria-hidden="true"></span>${esc(c)}</li>`).join("")}</ul>` : ""}</div>
+    ${dimension(s.w, s.l, t)}${next}${note}</article>`;
+}
+
+let bubbleN = 1;
+function detail(id, title, sub, inner, tag) {
+  bubbleN++;
+  return `<section class="det" aria-labelledby="${id}">
+    <div class="det-h"><span class="bubble" aria-hidden="true"><b>${bubbleN}</b>${esc(tag)}</span><h2 id="${id}">${esc(title)}</h2>${sub ? `<span class="sub">${esc(sub)}</span>` : ""}</div>
+    ${inner}</section>`;
+}
+
+function renderSchool() {
+  const s = BY_ID[state.sel], d = s && state.data[s.id];
+  const box = document.getElementById("school");
+  bubbleN = 1;
+  if (!d) { box.innerHTML = ""; return; }
+  const order = x => (x.status === "in" ? 0 : 2) + (x.kind === "meet" ? 1 : 0);
+  const today = new Date(); const t0 = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const week = (d.week || []).slice().sort((a, b) => (a.date || "").localeCompare(b.date || "") || (a.time || "").localeCompare(b.time || ""));
+  const isMeet = e => (d.sports || []).some(x => x.name === e.sport && x.g === e.g && x.kind === "meet");
+  const seq = week.length ? `<ol class="seq">${week.map((e, i) => `<li>
+      <span class="diamond" aria-hidden="true"><span>${i + 1}</span></span>
+      <span class="day">${esc(fmtDay(e.date))}</span>
+      <span><b>${esc((e.g === "Coed" ? "" : e.g[0] + ". ") + e.sport)}</b>&nbsp; ${esc(isMeet(e) ? e.opp : vsAt(e))}</span>
+      <span class="tm">${esc(e.result ? dash(e.result) : fmtTime(e.time))}</span></li>`).join("")}</ol>`
+    : `<p class="empty">Nothing scheduled in the next seven days.</p>`;
+  let html = detail("h-seq", "Sequence · next 7 days", "All sports", seq, s.short);
+  for (const [g, title] of [["Men", "Men's sports"], ["Women", "Women's sports"], ["Coed", "Coed & combined"]]) {
+    const list = (d.sports || []).filter(x => x.g === g).sort((a, b) => order(a) - order(b) || a.name.localeCompare(b.name));
+    if (!list.length) continue;
+    const inN = list.filter(x => x.status === "in").length;
+    html += detail("h-" + g, title, `${inN} in season · ${list.length - inN} off-season`, `<div class="cards">${list.map(card).join("")}</div>`, s.short);
+  }
+  const tl = titlesFor(s.name);
+  if (tl.length) html += `<details class="misc"><summary>2025–26 Big 12 titles (${tl.length})</summary><ul>${tl.map(t => `<li>${esc((t.g === "Coed" ? "" : t.g + "'s ") + t.sport)} · ${esc(t.type)}${t.champions.length > 1 ? " (shared)" : ""}</li>`).join("")}</ul></details>`;
+  if ((d.unverified || []).length) html += `<details class="misc"><summary>Not available right now (${d.unverified.length})</summary><ul>${d.unverified.map(u => `<li>${esc(u)}</li>`).join("")}</ul></details>`;
+  const srcs = (d.sports || []).filter(x => x.source);
+  if (srcs.length) html += `<details class="misc"><summary>Sources</summary><ul>${srcs.map(x => `<li><a href="${esc(x.source)}" target="_blank" rel="noopener">${esc((x.g === "Coed" ? "" : x.g + "'s ") + x.name)}</a></li>`).join("")}</ul></details>`;
+  box.innerHTML = html;
+}
+
+function renderTitleBlock() {
+  const s = BY_ID[state.sel], d = state.data[state.sel];
+  const a = state.asOf ? new Date(state.asOf) : null;
+  const ct = o => new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", ...o });
+  document.getElementById("tb-date").textContent = a ? ct({ month: "2-digit", day: "2-digit", year: "2-digit" }).format(a).replace(/\//g, "·") : "—";
+  document.getElementById("tb-stamp").setAttribute("aria-label", a ? "Last updated " + ct({ dateStyle: "long", timeStyle: "short" }).format(a) + " Central" : "Not updated yet");
+  document.getElementById("tb-rev").innerHTML = a
+    ? `<li>${esc(ct({ hour: "2-digit", minute: "2-digit", hour12: false }).format(a))} CT · latest result</li><li>Every page rechecked within 3 h</li><li>Last season rechecked weekly</li>`
+    : `<li>Waiting for first refresh</li>`;
+  const y = (a || new Date()).getFullYear(), m = (a || new Date()).getMonth();
+  const sy = m >= 6 ? y : y - 1;
+  document.getElementById("tb-project").textContent = `${sy}–${String(sy + 1).slice(2)}`;
+  document.getElementById("tb-name").textContent = d ? `${d.school} ${d.nickname || ""}` : (s ? s.name : "—");
+  document.getElementById("tb-swatch").style.background = s ? s.color : "transparent";
+  const dp = d ? dept(s.id, "all") : null;
+  document.getElementById("tb-totals").textContent = dp ? `${recStr(dp.w, dp.l, dp.t)} in season · ${pctStr(dp.pct)} · ${dp.titles} Big 12 title${dp.titles === 1 ? "" : "s"} 25–26` : " ";
+  document.getElementById("tb-no").textContent = s ? `${s.short}.1` : "—";
+  document.getElementById("tb-updated").textContent = a ? "Updated " + ct({ month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(a) + " CT" : " ";
+}
+
+function syncAlt() { document.querySelectorAll("a.alt").forEach(l => { l.href = l.getAttribute("href").split("#")[0] + "#" + state.sel; }); }
+function renderAll() { syncAlt(); renderIndex(); renderSched(); renderSchool(); renderTitleBlock(); }
+
+function select(id, scroll) {
+  if (!BY_ID[id]) return;
+  state.sel = id;
+  try { history.replaceState(null, "", "#" + id); } catch (e) {}
+  renderAll();
+  if (scroll) document.getElementById("h-seq")?.closest("section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+document.addEventListener("click", e => {
+  const sc = e.target.closest("[data-scope]");
+  if (sc) { state.scope = sc.dataset.scope; renderSched(); return; }
+  const inf = e.target.closest("[data-info]");
+  if (inf) { state.open = state.open === inf.dataset.info ? null : inf.dataset.info; renderSched(); return; }
+  const so = e.target.closest("[data-sort]");
+  if (so) {
+    const k = so.dataset.sort;
+    if (state.sortKey === k) state.sortDir = state.sortDir === "desc" ? "asc" : "desc";
+    else { state.sortKey = k; state.sortDir = k === "name" ? "asc" : "desc"; }
+    renderSched(); return;
+  }
+  const b = e.target.closest("button[data-id]");
+  if (b) select(b.dataset.id, !!b.closest("table"));
+});
+
+state.sel = BY_ID[location.hash.slice(1)] ? location.hash.slice(1) : "tcu";
+renderAll();
+
+async function load() {
+  try {
+    const [a, t] = await Promise.all([
+      fetch("/api/schools", { cache: "no-cache" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
+      fetch("/titles.json").then(r => r.ok ? r.json() : null).catch(() => null)
+    ]);
+    state.data = Object.fromEntries(a.schools.map(s => [s.id, s]));
+    state.asOf = a.asOf;
+    state.titles = t;
+    renderAll();
+  } catch (e) {
+    if (!Object.keys(state.data).length) document.getElementById("sched").innerHTML = `<div class="msg">Couldn't load the records right now. Reload to try again.</div>`;
+  }
+}
+load();
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") load(); });
+</script>
+</body>
+</html>

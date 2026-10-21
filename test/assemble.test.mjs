@@ -84,3 +84,19 @@ test("in season with no posted results says so instead of 0-0 or off-season", ()
   assert.equal(s.w, null);
   assert.match(s.notes, /hasn't posted results/);
 });
+
+test("a finished season says how it ended; past events with nothing posted say so", () => {
+  const bb = BY_ID.tcu.sports.find(s => s.espn === "womens-basketball");
+  const school = { ...BY_ID.tcu, sports: [bb] };
+  const prev = { events: [ev("2026-03-01", "W 70-60"), ev("2026-03-30", "L 60-72", { opp: "South Carolina", at: "Neutral", note: "NCAA Tournament - Elite 8", post: true })] };
+  const rows = [{ key: "tcu|espn|womens-basketball|prev|2", url: "p", data: JSON.stringify(prev), last_ok: 1 }];
+  const [s] = assembleSchool(school, rows, today).sports;
+  assert.equal(s.status, "off");
+  assert.equal(s.summary, "Last game: L 60–72 vs South Carolina (NCAA Tournament - Elite 8), Mar 30");
+
+  const xc = BY_ID.tcu.sports.find(x => x.slug === "cross-country" && x.g === "Men");
+  const cur = { label: "2026 Cross Country", events: [ev("2026-09-26", null, { opp: "Cowboy Jamboree", place: "7th" }), ev("2026-10-16", null, { opp: "Arturo Barrios Invitational" }), ev("2026-10-31", null, { opp: "Big 12 Championships" })] };
+  const [x] = assembleSchool({ ...BY_ID.tcu, sports: [xc] }, [{ key: "tcu|site|cross-country|cur", url: "c", data: JSON.stringify(cur), last_ok: 1 }], today).sports;
+  assert.equal(x.status, "in");
+  assert.deepEqual(x.pending, ["Arturo Barrios Invitational (Oct 16): result not posted yet"]);
+});

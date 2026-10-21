@@ -4,7 +4,7 @@
 
 import { sourcesFor } from "./sources.js";
 import { parseEspnSchedule } from "./espn.js";
-import { parseSidearm } from "./sidearm.js";
+import { parseSidearm, parseRegular } from "./sidearm.js";
 import { BY_ID, SCHOOLS, espnTeamId } from "./schools.js";
 import { localDate } from "./season.js";
 import { assembleSchool } from "./assemble.js";
@@ -53,6 +53,7 @@ const CONF = {};
 
 export function parse(s, body) {
   if (s.layer === "espn") return parseEspnSchedule(JSON.parse(body), s.teamId || espnTeamId(BY_ID[s.school], s.ref), CONF[s.ref] ??= confIds(s.ref));
+  if (s.reg) return parseRegular(body);
   return parseSidearm(body, { Y: s.Y, isFallBallSport: s.fam === "spring" });
 }
 
@@ -68,7 +69,8 @@ export async function runBatch(env, now = Date.now()) {
       status = res.status;
       if (res.ok) {
         const parsed = parse(s, await res.text());
-        if (s.layer === "site" && !parsed.events.length && !parsed.record.overall) err = "no schedule table found";
+        // A regular page without event headings (other templates) is a valid, empty answer.
+        if (s.layer === "site" && !s.reg && !parsed.events.length && !parsed.record.overall) err = "no schedule table found";
         else data = JSON.stringify(parsed);
       } else if (s.layer === "espn" && [400, 404, 500].includes(status) && (s.phase === "cur" || s.key.endsWith("|3"))) {
         // ESPN answers 400 or 500 for a season or postseason that doesn't exist yet (baseball

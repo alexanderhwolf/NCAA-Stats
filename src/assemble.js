@@ -3,6 +3,11 @@
 
 import { SCHOOLS } from "./schools.js";
 import { family, sidearmSeason, startYear, addDays } from "./season.js";
+import { mergePlacings } from "./sidearm.js";
+
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const md = iso => (iso ? `${MON[+iso.slice(5, 7) - 1]} ${+iso.slice(8, 10)}` : "");
+const dash = s => String(s || "").replace(/-/g, "–");
 
 const IN_SEASON_GRACE_DAYS = 21;
 
@@ -48,7 +53,11 @@ export function summarize(sport, events, recordLine, today) {
     : counted.length > 0 || (!!recordLine?.overall && (w + l + t) > 0);
   // Competed this season (an event date has passed), whether or not a result was posted.
   const played = events.some(e => !e.exhibition && !e.canceled && (e.end || e.date) < today);
-  return { w, l, t, conf, streak, finishes, next, lastGame, hasResults, upcoming, played };
+  // Past events with nothing posted: say so on the tile ("result not posted yet").
+  const pending = events.filter(e => !e.exhibition && !e.canceled && !e.result && !e.place && (e.end || e.date) < today && (e.end || e.date) >= addDays(today, -21))
+    .slice(-2).map(e => `${e.opp || e.tournament || "Event"} (${md(e.end || e.date)}): result not posted yet`);
+  const lastFinish = events.filter(e => e.place).at(-1) || null;
+  return { w, l, t, conf, streak, finishes, next, lastGame, lastFinish, hasResults, upcoming, played, pending };
 }
 
 function shape(sport, sm, phase, season, source) {
@@ -63,8 +72,23 @@ function shape(sport, sm, phase, season, source) {
     last: !meet && sm.lastGame ? { date: sm.lastGame.date, opp: sm.lastGame.opp, at: sm.lastGame.at, result: sm.lastGame.result } : null,
     next: ev(sm.next),
     finishes: meet ? sm.finishes : null,
-    summary: null, notes: null, source,
+    pending: phase === "in" ? (sm.pending || []) : [],
+    summary: phase === "off" ? finalNote(sport, sm) : null, notes: null, source,
   };
+}
+
+// How a finished season ended: its last game (with ESPN's or the school's event label, e.g.
+// "NCAA Tournament - Elite 8") or, for a meet sport, its last posted finish.
+function finalNote(sport, sm) {
+  if (sport.kind === "meet") {
+    const f = sm.lastFinish;
+    return f ? `Last finish: ${f.place} at ${f.opp || f.tournament || "event"}, ${md(f.end || f.date)}` : null;
+  }
+  const g = sm.lastGame;
+  if (!g) return null;
+  const where = g.at === "Away" ? "at" : "vs";
+  const label = g.note || (g.tournament && !/^\s*$/.test(g.tournament) ? g.tournament : null);
+  return `Last game: ${dash(g.result)} ${where} ${g.opp}${label ? ` (${label})` : ""}, ${md(g.date)}`;
 }
 
 export function assembleSchool(school, rows, today) {
@@ -95,6 +119,9 @@ export function assembleSchool(school, rows, today) {
       };
       cur = split(data(kc)); prev = split(data(kp));
       curUrl = curRows[0]?.url; prevUrl = prevRows[0]?.url;
+      // Meet placings the text page leaves out come from the regular schedule page.
+      const reg = sp.kind === "meet" ? data(`${school.id}|reg|${sp.slug}|cur`) : null;
+      if (cur && reg?.events?.length) cur = { ...cur, events: mergePlacings(cur.events, reg.events, sp.g) };
     }
     const label = sp.g === "Coed" ? sp.name : `${sp.g}'s ${sp.name.toLowerCase()}`;
     // Shown as schools write it ("2025-26", "2026"), whichever source the numbers came from.

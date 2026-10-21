@@ -185,7 +185,7 @@ footer.small { font-size: 12px; color: var(--muted); border-top: 1px solid var(-
 
   <footer class="small">
     Unofficial fan board; not affiliated with the Big 12 or any school. Football, basketball, volleyball, soccer, baseball and softball come from ESPN; every other sport comes from the school's own athletics site. Anything that couldn't be loaded is listed under the school, never guessed.
-    <br><a href="/" id="alt-link">See the Drawing Set look</a>
+    <br><a href="/" class="alt">Main board</a> · <a href="/drawing.html" class="alt">Drawing Set look</a>
   </footer>
 </main>
 
@@ -342,7 +342,7 @@ function renderUpdated() {
   el.textContent = state.asOf ? "Updated " + new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(state.asOf)) + " CT" : "Waiting for first refresh";
 }
 
-function syncAlt() { const l = document.getElementById("alt-link"); if (l) l.href = l.getAttribute("href").split("#")[0] + "#" + state.sel; }
+function syncAlt() { document.querySelectorAll("a.alt").forEach(l => { l.href = l.getAttribute("href").split("#")[0] + "#" + state.sel; }); }
 function renderAll() { syncAlt(); renderUpdated(); renderStand(); renderPills(); renderSchool(); }
 
 function select(id, scroll) {

@@ -62,9 +62,15 @@ window.B12 = (() => {
       const ns = rows.map(r => r.d.n);
       return `Schools sponsor different sports, so this view isn't an equal comparison (${Math.min(...ns)} to ${Math.max(...ns)} sports per school). Adj. weights each sport equally so long seasons don't dominate.`;
     }
-    const gaps = rows.filter(r => r.d.missing.length).map(r => `${esc(r.s.name)} (${r.d.missing.map(m => esc(label(m)) + ": " + esc(m.reason)).join("; ")})`);
-    if (!gaps.length) return "";
-    return `† Not an equal comparison: ${gaps.join(", ")}. Adj. averages only the sports each school has a record in, so a missing sport doesn't count for or against it.`;
+    // Grouped by sport and reason, so a gap shared by several schools reads as one line.
+    const groups = new Map();
+    for (const r of rows) for (const m of r.d.missing) {
+      const k = `${label(m)}, ${m.reason}`;
+      (groups.get(k) || groups.set(k, []).get(k)).push(r.s.name);
+    }
+    if (!groups.size) return "";
+    const parts = [...groups].map(([k, names]) => `${esc(k[0].toUpperCase() + k.slice(1))}: ${names.map(esc).join(", ")}.`);
+    return `† Not an equal comparison. ${parts.join(" ")} Adj. averages only the sports each school has a record in, so a missing sport doesn't count for or against it.`;
   }
 
   const HOW = `<p><b>FB · VB · SOC</b> counts men's football, women's volleyball and women's soccer: the three fall team sports nearly every Big 12 school plays. <b>All sports</b> counts every men's and women's sport in season with a confirmed win–loss record.</p>

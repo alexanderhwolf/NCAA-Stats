@@ -38,3 +38,26 @@ test("ESPN football schedule events", () => {
   assert.deepEqual([wvu.date, wvu.at, wvu.opp, wvu.result, wvu.conf], ["2026-10-24", "Home", "West Virginia", null, true]);
   assert.match(wvu.time, /CT$/);
 });
+
+import { parseRegular, mergePlacings } from "../src/sidearm.js";
+
+test("TCU regular schedule pages: cross country, golf and triathlon placings", () => {
+  const xc = parseRegular(fx("tcu-regular-cross-country.html")).events;
+  const barrios = xc.filter(e => e.opp === "Arturo Barrios Invitational");
+  assert.deepEqual(barrios.map(e => [e.date, e.g, e.place]), [["2026-10-16", "Men", "10th"], ["2026-10-16", "Women", "19th"]]);
+  const golf = parseRegular(fx("tcu-regular-womens-golf.html")).events;
+  assert.deepEqual(golf.find(e => e.date === "2026-10-19").place, "1st of 11");
+  assert.ok(golf.some(e => e.opp === "The Ally" && e.canceled));
+  const tri = parseRegular(fx("tcu-regular-triathlon.html")).events;
+  assert.deepEqual(tri.find(e => e.date === "2026-10-04").place, "1st");
+});
+
+test("placings merge into the text page's events by date and gender", () => {
+  const reg = parseRegular(fx("tcu-regular-womens-golf.html")).events;
+  const textEvents = [{ date: "2026-10-18", end: "2026-10-19", opp: "Jim West Challenge", place: null, result: null }];
+  assert.equal(mergePlacings(textEvents, reg, "Women")[0].place, "1st of 11");
+  const xc = parseRegular(fx("tcu-regular-cross-country.html")).events;
+  const e = [{ date: "2026-10-16", opp: "Arturo Barrios Invitational", place: null, result: null }];
+  assert.equal(mergePlacings(e, xc, "Men")[0].place, "10th");
+  assert.equal(mergePlacings(e, xc, "Women")[0].place, "19th");
+});
