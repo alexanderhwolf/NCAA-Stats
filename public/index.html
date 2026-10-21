@@ -124,7 +124,7 @@ h2.sec { font-family: var(--display); font-weight: 700; font-size: clamp(24px, 4
 ol.fin { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 ol.fin li { display: grid; grid-template-columns: 64px 1fr auto; gap: 8px; font-size: 13.5px; align-items: baseline; }
 .place { font-family: var(--display); font-weight: 700; font-size: 17px; font-variant-numeric: tabular-nums; }
-.place.top { color: var(--win); }
+.place.podium { color: var(--win); }
 .fin .e { min-width: 0; overflow-wrap: anywhere; }
 .fin .dt { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
@@ -303,7 +303,7 @@ function meetTile(s) {
   const fin = (s.finishes || []);
   const list = fin.length ? `<ol class="fin">${fin.map(f => {
     const top = /^(T-)?(1st|2nd|3rd)\b/i.test(f.place || "");
-    return `<li><span class="place${f.place ? (top ? " top" : "") : " na"}">${esc(f.place || "—")}</span><span class="e">${esc(f.event)}</span><span class="dt">${esc(fmtD(f.date))}</span></li>`;
+    return `<li><span class="place${f.place ? (top ? " podium" : "") : " na"}">${esc(f.place || "—")}</span><span class="e">${esc(f.event)}</span><span class="dt">${esc(fmtD(f.date))}</span></li>`;
   }).join("")}</ol>` : `<div class="rec none">${off ? "No W–L (meet sport)" : "No posted finishes yet"}</div>`;
   const meta = [];
   if (s.summary) meta.push(`<div>${esc(s.summary)}</div>`);
