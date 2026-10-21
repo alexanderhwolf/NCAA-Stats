@@ -69,6 +69,8 @@ h2.sec { font-family: var(--display); font-weight: 700; font-size: clamp(24px, 4
   .score .hide-sm { display: none; }
   .score td:first-child { border-left: 4px solid var(--row-sc, transparent); }
   .seg { display: flex; flex: 1; } .seg button { flex: 1; }
+  .filters .seg { flex: 1 1 100%; }
+  .filters select { flex: 1; }
 }
 
 .seg { display: inline-flex; flex-wrap: wrap; gap: 0; margin-bottom: 10px; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
@@ -140,6 +142,17 @@ ol.fin li { display: grid; grid-template-columns: 64px 1fr auto; gap: 8px; font-
 .disc { margin: 8px 0 0; font-size: 13.5px; color: var(--muted); max-width: 80ch; }
 .pend { font-size: 13px; color: var(--muted); border-left: 2px solid var(--line); padding-left: 8px; }
 .place.na { color: var(--muted); }
+/* Filters: sticky so they stay in reach while scrolling the tiles */
+.filters { position: sticky; top: 0; z-index: 2; background: var(--bg); padding: 10px 0; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.filters .seg { margin: 0; }
+.filters .seg button { min-height: 36px; }
+.filters .seg button[aria-pressed="true"] { background: var(--sc); color: var(--sc-ink); }
+.filters label { font-family: var(--display); font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.filters select { font: 600 14px var(--body); color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 4px; min-height: 36px; padding: 0 8px; max-width: 100%; }
+.filters .count { font-size: 13px; color: var(--muted); }
+.filters .reset { font: 600 13px var(--body); background: none; border: 0; color: var(--fg); text-decoration: underline; cursor: pointer; padding: 6px 2px; }
+#tiles { display: grid; gap: 26px; }
+#tiles > * { min-width: 0; }
 details.dn { border: 0; background: none; padding: 0; font-size: 12.5px; }
 details.dn summary { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
 details.dn p { margin: 4px 0 0; }
@@ -204,7 +217,7 @@ const SCHOOLS = [
 ];
 const BY_ID = Object.fromEntries(SCHOOLS.map(s => [s.id, s]));
 
-const state = { data: {}, titles: null, info: null, sel: null, sortKey: "pct", sortDir: "desc", scope: "core", open: null };
+const state = { data: {}, titles: null, info: null, sel: null, sortKey: "pct", sortDir: "desc", scope: "core", open: null, gf: "all", sport: "" };
 
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -330,8 +343,53 @@ function renderSchool() {
     return `<div class="ev-card"><span class="d">${esc(fmtDow(e.date))}</span><span class="s">${esc(e.g === "Coed" ? "" : e.g + "'s ")}${esc(e.sport)}</span><span class="o">${esc(meet ? (e.opp || "TBA") : oppLine(e))}</span><span class="${r ? "r " + rc : "o"}">${esc(r ? dash(r) : fmtTime(e.time))}</span></div>`;
   }).join("")}</div>` : `<p class="empty">Nothing scheduled ${esc(range)}.</p>`;
 
-  const genders = ["Men", "Women", "Coed"].map(g => {
-    const list = (d.sports || []).filter(x => x.g === g);
+  const srcs = (d.sports || []).filter(x => x.source).map(x => `<li><a href="${esc(x.source)}" target="_blank" rel="noopener">${esc(x.g === "Coed" ? "" : x.g + "'s ")}${esc(x.name)}</a></li>`).join("");
+  const unv = (d.unverified || []).map(u => `<li>${esc(u)}</li>`).join("");
+  // Sport filter: every sport this school sponsors, plus the current pick if it doesn't
+  // (so the filter carries across schools and says plainly when a school has none).
+  const names = [...new Set((d.sports || []).map(x => x.name))].sort();
+  if (state.sport && !names.includes(state.sport)) names.unshift(state.sport);
+  const gseg = [["all", "Men's & women's"], ["Men", "Men's"], ["Women", "Women's"]]
+    .map(([v, l]) => `<button type="button" data-gf="${v}" aria-pressed="${state.gf === v}">${l}</button>`).join("");
+  const filters = `<div class="filters" role="group" aria-label="Filter sports">
+      <div class="seg" role="group" aria-label="Men's or women's">${gseg}</div>
+      <label for="sport-f">Sport</label>
+      <select id="sport-f"><option value="">All sports</option>${names.map(n => `<option value="${esc(n)}"${n === state.sport ? " selected" : ""}>${esc(n)}</option>`).join("")}</select>
+      <span class="count" id="f-count" aria-live="polite"></span>
+      <button type="button" class="reset" id="f-reset" hidden>Show everything</button>
+    </div>`;
+
+  box.innerHTML = `
+    <div class="band"><div><h2>${esc(d.school)} ${esc(d.nickname || "")}</h2></div>
+      <div class="facts"><span><b>${recStr(dp.w, dp.l, dp.t)}</b>in season</span><span><b>${pctStr(dp.pct)}</b>pct</span><span><b>${dp.titles}</b>Big 12 titles 25–26</span></div></div>
+    <div><h2 class="sec">This week</h2><p class="lede">${esc(range)}, every sport.</p>${weekHtml}</div>
+    ${filters}
+    <div id="tiles"></div>
+    ${tl.length ? `<div><h2 class="sec">2025–26 Big 12 titles</h2><ul class="titles">${tl.map(t => `<li>${esc(t.g === "Coed" ? "" : t.g + "'s ")}${esc(t.sport)} · ${esc(t.type)}${t.champions.length > 1 ? " (shared)" : ""}</li>`).join("")}</ul></div>` : ""}
+    ${unv ? `<details><summary>Not available right now (${(d.unverified || []).length})</summary><ul>${unv}</ul></details>` : ""}
+    ${srcs ? `<details><summary>Sources for ${esc(d.school)}</summary><ul>${srcs}</ul></details>` : ""}`;
+  renderTiles();
+}
+
+// The sport tiles under the filters. Re-rendered on its own so the filter controls keep focus.
+function renderTiles() {
+  const box = document.getElementById("tiles");
+  const s = BY_ID[state.sel], d = s && state.data[s.id];
+  if (!box || !d) return;
+  const all = d.sports || [];
+  // Coed teams are combined men's and women's programs, so they show under either.
+  const keep = x => (state.gf === "all" || x.g === state.gf || x.g === "Coed") && (!state.sport || x.name === state.sport);
+  const shown = all.filter(keep);
+  const filtered = state.gf !== "all" || !!state.sport;
+  document.getElementById("f-count").textContent = filtered ? `Showing ${shown.length} of ${all.length} teams` : `${all.length} teams`;
+  document.getElementById("f-reset").hidden = !filtered;
+  if (!shown.length) {
+    const what = `${state.gf === "all" ? "" : state.gf.toLowerCase() + "'s "}${(state.sport || "sports").toLowerCase()}`;
+    box.innerHTML = `<div class="msg">${esc(d.school)} doesn't have ${esc(what)}. <button type="button" class="reset" data-freset>Show everything</button></div>`;
+    return;
+  }
+  box.innerHTML = ["Men", "Women", "Coed"].map(g => {
+    const list = shown.filter(x => x.g === g);
     if (!list.length) return "";
     const groups = GROUPS.map(grp => {
       const items = list.filter(grp.test);
@@ -340,18 +398,6 @@ function renderSchool() {
     }).join("");
     return `<section class="gender-block"><h2 class="gh">${g === "Coed" ? "Coed & combined" : g + "'s sports"}</h2>${groups}</section>`;
   }).join("");
-
-  const srcs = (d.sports || []).filter(x => x.source).map(x => `<li><a href="${esc(x.source)}" target="_blank" rel="noopener">${esc(x.g === "Coed" ? "" : x.g + "'s ")}${esc(x.name)}</a></li>`).join("");
-  const unv = (d.unverified || []).map(u => `<li>${esc(u)}</li>`).join("");
-
-  box.innerHTML = `
-    <div class="band"><div><h2>${esc(d.school)} ${esc(d.nickname || "")}</h2></div>
-      <div class="facts"><span><b>${recStr(dp.w, dp.l, dp.t)}</b>in season</span><span><b>${pctStr(dp.pct)}</b>pct</span><span><b>${dp.titles}</b>Big 12 titles 25–26</span></div></div>
-    <div><h2 class="sec">This week</h2><p class="lede">${esc(range)}, every sport.</p>${weekHtml}</div>
-    ${genders}
-    ${tl.length ? `<div><h2 class="sec">2025–26 Big 12 titles</h2><ul class="titles">${tl.map(t => `<li>${esc(t.g === "Coed" ? "" : t.g + "'s ")}${esc(t.sport)} · ${esc(t.type)}${t.champions.length > 1 ? " (shared)" : ""}</li>`).join("")}</ul></div>` : ""}
-    ${unv ? `<details><summary>Not available right now (${(d.unverified || []).length})</summary><ul>${unv}</ul></details>` : ""}
-    ${srcs ? `<details><summary>Sources for ${esc(d.school)}</summary><ul>${srcs}</ul></details>` : ""}`;
 }
 
 function renderAll() {
@@ -372,6 +418,9 @@ function select(id, scroll) {
 }
 
 document.addEventListener("click", e => {
+  const gf = e.target.closest("[data-gf]");
+  if (gf) { state.gf = gf.dataset.gf; document.querySelectorAll("[data-gf]").forEach(b => b.setAttribute("aria-pressed", b === gf)); renderTiles(); return; }
+  if (e.target.closest("#f-reset, [data-freset]")) { state.gf = "all"; state.sport = ""; renderSchool(); return; }
   const sc = e.target.closest("[data-scope]");
   if (sc) { state.scope = sc.dataset.scope; renderScorecard(); renderSchool(); return; }
   const inf = e.target.closest("[data-info]");
@@ -387,6 +436,9 @@ document.addEventListener("click", e => {
   if (row) { select(row.dataset.id, true); return; }
   const pb = e.target.closest("#picker button[data-id]");
   if (pb) select(pb.dataset.id, false);
+});
+document.addEventListener("change", e => {
+  if (e.target.id === "sport-f") { state.sport = e.target.value; renderTiles(); }
 });
 document.addEventListener("keydown", e => {
   if (e.target.closest && e.target.closest("[data-info]")) return;
