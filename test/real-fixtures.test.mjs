@@ -61,3 +61,32 @@ test("placings merge into the text page's events by date and gender", () => {
   assert.equal(mergePlacings(e, xc, "Men")[0].place, "10th");
   assert.equal(mergePlacings(e, xc, "Women")[0].place, "19th");
 });
+
+// Texas Tech's text page (captured through /probe Oct 21, 2026; trimmed to <main> and three rows).
+// Its first h1 is a screen-reader site name; the season heading is the second h1.
+test("Texas Tech: label comes from the season heading, so in-season meets aren't treated as stale", async () => {
+  const { parseSidearm } = await import("../src/sidearm.js");
+  const { assembleSchool } = await import("../src/assemble.js");
+  const { BY_ID } = await import("../src/schools.js");
+  const parsed = parseSidearm(fx("ttu-cross-country-2026-main.html"), { Y: 2026 });
+  assert.equal(parsed.label, "2026 Cross Country Schedule");
+  const rows = [{ key: "texas-tech|site|cross-country|cur", url: "https://texastech.com/sports/cross-country/schedule/text/2026", last_ok: 1, data: JSON.stringify(parsed) }];
+  const doc = assembleSchool(BY_ID["texas-tech"], rows, "2026-10-21");
+  const xc = doc.sports.find(s => s.name === "Cross Country");
+  assert.equal(xc.status, "in");
+  assert.ok(xc.pending.some(p => /Arturo Barrios Invite/.test(p)));
+  assert.equal(xc.next.opp, "Big 12 Cross Country Championships");
+});
+
+test("ESPN: another school's schedule is rejected, and all-empty seasons aren't a 0-0 record", async () => {
+  const { teamMatches, BY_ID, espnTeamId } = await import("../src/schools.js");
+  const { assembleSchool } = await import("../src/assemble.js");
+  assert.equal(espnTeamId(BY_ID["oklahoma-state"], "baseball"), "110");
+  assert.equal(espnTeamId(BY_ID["texas-tech"], "softball"), "613");
+  assert.equal(teamMatches(BY_ID["oklahoma-state"], "Missouri State Bears"), false);
+  assert.equal(teamMatches(BY_ID["texas-tech"], "Texas Tech Lady Raiders"), true);
+  const empty = JSON.stringify({ events: [], label: null, teamName: null, empty: true });
+  const rows = ["prev|2", "prev|3", "cur|2", "cur|3"].map(k => ({ key: `texas-tech|espn|baseball|${k}`, url: "u", last_ok: 1, data: empty }));
+  const bb = assembleSchool(BY_ID["texas-tech"], rows, "2026-10-21").sports.find(s => s.name === "Baseball");
+  assert.equal(bb.w, null);
+});

@@ -96,8 +96,11 @@ export function parseSidearm(html, { Y, isFallBallSport = false } = {}) {
   const m0 = html.indexOf("<main"), m1 = html.indexOf("</main>");
   if (m0 >= 0 && m1 > m0) html = html.slice(m0, m1);
   const t = text(html);
-  const h1 = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
-  out.label = h1 ? text(h1[1]) : null;
+  // The season heading ("2026 Cross Country Schedule"). Some templates put a screen-reader h1
+  // with the site name first (Texas Tech: "Texas Tech University Athletics"), so prefer the h1
+  // that names a season; with none, the label stays null rather than a site name.
+  const h1s = [...html.matchAll(/<h1[^>]*>([\s\S]*?)<\/h1>/gi)].map(m => text(m[1]));
+  out.label = h1s.find(h => /\b(19|20)\d\d\b/.test(h)) || null;
   const tbl = tables(html).find(rows => rows[0] && rows[0].some(h => /opponent/i.test(h)) && rows[0].some(h => /date/i.test(h)));
   // Record lines sit outside the schedule table.
   out.record = recordLines(t.replace(tbl ? tbl.flat().join(" ") : "", " "));

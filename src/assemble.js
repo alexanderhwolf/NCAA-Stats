@@ -1,7 +1,7 @@
 // Turns stored page rows into one document per school, in the same shape the page reads:
 // { id, school, nickname, site, asOf, sports: [...], week: [...], unverified: [...] }.
 
-import { membersIn } from "./schools.js";
+import { membersIn, teamMatches } from "./schools.js";
 import { family, sidearmSeason, startYear, addDays } from "./season.js";
 import { mergePlacings } from "./sidearm.js";
 
@@ -20,6 +20,10 @@ function dedupe(events) {
     return true;
   }).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
 }
+
+// Only a label that names a season can say a page is for the wrong one. Pages stored before
+// the parser fix carry the site name ("Iowa State University Athletics") as label.
+const namesSeason = l => !!l && /\b(19|20)\d\d\b/.test(l);
 
 const letter = r => (r && /^[WLT]\b/.test(r) ? r[0] : null);
 
@@ -105,7 +109,9 @@ export function assembleSchool(school, rows, today) {
       const k = ph => [2, 3].map(st => `${school.id}|espn|${sp.espn}|${ph}|${st}`);
       curRows = k("cur").map(x => byKey.get(x)).filter(Boolean);
       prevRows = k("prev").map(x => byKey.get(x)).filter(Boolean);
-      const merge = keys => { const ds = keys.map(data).filter(Boolean); return ds.length ? { events: dedupe(ds.flatMap(d => d.events)), record: null } : null; };
+      // ESPN's "nothing there" answers (400 for a season it hasn't published) are stored as empty;
+      // if every page for a season is empty, that's no data, not a 0-0 record.
+      const merge = keys => { const ds = keys.map(data).filter(d => d && teamMatches(school, d.teamName)); return ds.some(d => !d.empty) ? { events: dedupe(ds.flatMap(d => d.events)), record: null } : null; };
       cur = merge(k("cur")); prev = merge(k("prev"));
       curUrl = curRows[0]?.url; prevUrl = prevRows[0]?.url;
     } else {
@@ -130,7 +136,7 @@ export function assembleSchool(school, rows, today) {
     // A school page asked for a season it hasn't posted quietly serves its latest one
     // (gymnastics asked for 2026-27 answers "2025-26 Gymnastics Schedule"). Those rows aren't
     // this season: keep them out of the record, and leave last season to the prev page.
-    if (sp.layer === "site" && cur?.label && !cur.label.includes(curSeason)) {
+    if (sp.layer === "site" && namesSeason(cur?.label) && !cur.label.includes(curSeason)) {
       cur = { ...cur, record: null, events: cur.events.filter(e => (e.end || e.date) >= today).map(e => ({ ...e, exhibition: true })) };
     }
 
@@ -208,15 +214,15 @@ export function assembleSeason(school, rows, y, Ycur, today) {
     }
     const got = keys.map(k => ({ row: byKey.get(k), d: data(k) }));
     let d = null;
-    const ds = got.map(x => x.d).filter(Boolean);
-    if (ds.length) {
+    const ds = got.map(x => x.d).filter(x => x && (!useEspn || teamMatches(school, x.teamName)));
+    if (ds.some(x => !x.empty)) {
       d = useEspn ? { events: dedupe(ds.flatMap(x => x.events)), record: null } : ds[0];
       if (!useEspn && shared.has(sp.slug)) d = { ...d, events: d.events.filter(e => !e.g || e.g === sp.g), record: null };
     }
     const url = got.find(x => x.row)?.row.url || null;
     // A school page asked for an old season sometimes answers with a different one.
     let why = null;
-    if (d && !useEspn && d.label && !d.label.includes(sideSeason)) { why = `the school's page didn't have ${sideSeason}`; d = null; }
+    if (d && !useEspn && namesSeason(d.label) && !d.label.includes(sideSeason)) { why = `the school's page didn't have ${sideSeason}`; d = null; }
     if (!d) {
       const bad = got.map(x => x.row).find(r => r && r.last_error);
       if (!why) why = !got.some(x => x.row) ? "not fetched yet"

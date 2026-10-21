@@ -2741,6 +2741,9 @@ export const SCHOOLS = [
 
 export const BY_ID = Object.fromEntries(SCHOOLS.map(s => [s.id, s]));
 
+// Tennis and beach volleyball are dual-match sports with a team W-L record (spring), not meets.
+for (const s of SCHOOLS) for (const sp of s.sports) if (sp.name === "Tennis" || sp.name === "Beach Volleyball") sp.kind = "h2h";
+
 // Big 12 membership by academic start year (2016 = 2016-17). Joined: first season as a member.
 // TCU and West Virginia joined for 2012-13; BYU, Cincinnati, Houston and UCF for 2023-24;
 // Arizona, Arizona State, Colorado and Utah for 2024-25; Texas and Oklahoma's last season was 2023-24.
@@ -2752,9 +2755,27 @@ export const membersIn = Y => SCHOOLS.filter(s => memberIn(s, Y));
 // How far back the year selector goes.
 export const HISTORY_YEARS = 10;
 
+// College baseball and softball have their own ESPN id spaces (football's 197 is Oklahoma State;
+// baseball's 197 is Missouri State). Ids from ESPN's team lists, matched by name, Oct 21, 2026.
+const ESPN_BASEBALL = {"arizona": 60, "arizona-state": 59, "baylor": 121, "byu": 127, "ucf": 160, "cincinnati": 161, "colorado": 334, "houston": 124, "iowa-state": 373, "kansas": 168, "kansas-state": 264, "oklahoma-state": 110, "tcu": 198, "texas-tech": 201, "utah": 128, "west-virginia": 136, "texas": 126, "oklahoma": 112};
+const ESPN_SOFTBALL = {"arizona": 472, "arizona-state": 471, "baylor": 533, "byu": 539, "ucf": 572, "cincinnati": 573, "colorado": 688, "houston": 536, "iowa-state": 727, "kansas": 580, "kansas-state": 627, "oklahoma-state": 522, "tcu": 610, "texas-tech": 613, "utah": 540, "west-virginia": 548, "texas": 538, "oklahoma": 524};
+
+// Does an ESPN team name belong to this school? "Kansas State Wildcats" is not Kansas, and
+// "Texas Southern Tigers" is not Texas: the name must start with the school's and the rest must
+// share a word with its nickname ("Oklahoma State Cowgirls" matches "Cowboys & Cowgirls").
+export function teamMatches(school, teamName) {
+  if (!teamName) return true;
+  const n = String(teamName);
+  if (!n.startsWith(school.name + " ")) return false;
+  const rest = new Set(n.slice(school.name.length + 1).toLowerCase().split(/\s+/));
+  return school.nickname.toLowerCase().split(/[\s&]+/).filter(Boolean).some(w => rest.has(w));
+}
+
 // The ESPN team id this school uses for a given ESPN sport key.
 export function espnTeamId(school, espnSport) {
   if (espnSport === "womens-soccer") return school.espnSoccerW;
   if (espnSport === "mens-soccer") return school.espnSoccerM;
+  if (espnSport === "baseball") return ESPN_BASEBALL[school.id] != null ? String(ESPN_BASEBALL[school.id]) : null;
+  if (espnSport === "softball") return ESPN_SOFTBALL[school.id] != null ? String(ESPN_SOFTBALL[school.id]) : null;
   return String(school.espnId);
 }

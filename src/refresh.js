@@ -5,7 +5,7 @@
 import { sourcesFor } from "./sources.js";
 import { parseEspnSchedule } from "./espn.js";
 import { parseSidearm, parseRegular } from "./sidearm.js";
-import { BY_ID, espnTeamId, membersIn, HISTORY_YEARS } from "./schools.js";
+import { BY_ID, espnTeamId, membersIn, HISTORY_YEARS, teamMatches } from "./schools.js";
 import { localDate, startYear } from "./season.js";
 import { assembleSchool, assembleSeason } from "./assemble.js";
 
@@ -77,6 +77,8 @@ export async function runBatch(env, now = Date.now()) {
         const parsed = parse(s, await res.text());
         // A regular page without event headings (other templates) is a valid, empty answer.
         if (s.layer === "site" && !s.reg && !parsed.events.length && !parsed.record.overall) err = "no schedule table found";
+        // A wrong team id returns some other school's schedule; never store it.
+        else if (s.layer === "espn" && !teamMatches(BY_ID[s.school], parsed.teamName)) err = `wrong team (${parsed.teamName})`;
         else data = JSON.stringify(parsed);
       } else if (s.layer === "espn" && [400, 404, 500].includes(status) && (s.phase === "cur" || s.key.endsWith("|3"))) {
         // ESPN answers 400 or 500 for a season or postseason that doesn't exist yet (baseball

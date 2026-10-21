@@ -12,7 +12,10 @@ const json = (body, init = {}) => new Response(JSON.stringify(body), {
 });
 
 // /probe only fetches these hosts, so it can't be used as an open proxy.
-const PROBE_HOSTS = new Set(["site.api.espn.com", ...SCHOOLS.flatMap(s => [s.domain, "www." + s.domain])]);
+// Plus candidate sources being evaluated: ncaa.com (standings, scoreboards), NCAA stats,
+// TFRRS (cross country / track) and Golfstat (golf).
+const CANDIDATE_HOSTS = ["www.ncaa.com", "data.ncaa.com", "sdataprod.ncaa.com", "stats.ncaa.org", "www.tfrrs.org", "tfrrs.org", "www.golfstat.com", "results.golfstat.com"];
+const PROBE_HOSTS = new Set(["site.api.espn.com", ...CANDIDATE_HOSTS, ...SCHOOLS.flatMap(s => [s.domain, "www." + s.domain])]);
 
 async function probe(request, env) {
   if (env.PROBE_ENABLED !== "true") return new Response("Not found", { status: 404 });
