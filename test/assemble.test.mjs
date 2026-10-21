@@ -74,3 +74,13 @@ test("a school page serving an older season doesn't count as this season", () =>
   assert.equal(g.season, "2025-26");
   assert.deepEqual([g.w, g.l], [13, 4]);
 });
+
+test("in season with no posted results says so instead of 0-0 or off-season", () => {
+  const sp = BY_ID.tcu.sports.find(s => s.slug === "swimming-and-diving" && s.g === "Women");
+  const school = { ...BY_ID.tcu, sports: [sp] };
+  const cur = { label: "2026-27 Swimming and Diving Schedule", record: { overall: "0-0" }, events: [ev("2026-10-03", null, { opp: "at Arkansas" }), ev("2026-10-30", null, { opp: "SMU" })] };
+  const [s] = assembleSchool(school, [{ key: "tcu|site|swimming-and-diving|cur", url: "u", data: JSON.stringify(cur), last_ok: 1 }], today).sports;
+  assert.equal(s.status, "in");
+  assert.equal(s.w, null);
+  assert.match(s.notes, /hasn't posted results/);
+});

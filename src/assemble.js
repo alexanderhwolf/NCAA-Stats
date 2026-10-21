@@ -2,7 +2,7 @@
 // { id, school, nickname, site, asOf, sports: [...], week: [...], unverified: [...] }.
 
 import { SCHOOLS } from "./schools.js";
-import { family, sidearmSeason, espnSeason, startYear, addDays } from "./season.js";
+import { family, sidearmSeason, startYear, addDays } from "./season.js";
 
 const IN_SEASON_GRACE_DAYS = 21;
 
@@ -46,7 +46,9 @@ export function summarize(sport, events, recordLine, today) {
   const hasResults = sport.kind === "meet"
     ? finishes.length > 0 || events.some(e => !e.exhibition && (e.end || e.date) < today)
     : counted.length > 0 || (!!recordLine?.overall && (w + l + t) > 0);
-  return { w, l, t, conf, streak, finishes, next, lastGame, hasResults, upcoming };
+  // Competed this season (an event date has passed), whether or not a result was posted.
+  const played = events.some(e => !e.exhibition && !e.canceled && (e.end || e.date) < today);
+  return { w, l, t, conf, streak, finishes, next, lastGame, hasResults, upcoming, played };
 }
 
 function shape(sport, sm, phase, season, source) {
@@ -95,8 +97,9 @@ export function assembleSchool(school, rows, today) {
       curUrl = curRows[0]?.url; prevUrl = prevRows[0]?.url;
     }
     const label = sp.g === "Coed" ? sp.name : `${sp.g}'s ${sp.name.toLowerCase()}`;
-    const curSeason = sp.layer === "espn" ? String(espnSeason(fam, Y)) : sidearmSeason(fam, Y);
-    const prevSeason = sp.layer === "espn" ? String(espnSeason(fam, Y - 1)) : sidearmSeason(fam, Y - 1);
+    // Shown as schools write it ("2025-26", "2026"), whichever source the numbers came from.
+    const curSeason = sidearmSeason(fam, Y);
+    const prevSeason = sidearmSeason(fam, Y - 1);
     // A school page asked for a season it hasn't posted quietly serves its latest one
     // (gymnastics asked for 2026-27 answers "2025-26 Gymnastics Schedule"). Those rows aren't
     // this season: keep them out of the record, and leave last season to the prev page.
@@ -121,6 +124,11 @@ export function assembleSchool(school, rows, today) {
       sports.push(shape(sp, smCur, "in", curSeason, curUrl));
     } else if (smCur?.hasResults) {
       sports.push(shape(sp, smCur, "off", curSeason, curUrl));
+    } else if (smCur?.played && smCur.upcoming.length) {
+      // In season, but the school's page hasn't posted results (TCU swimming lists its meets
+      // with blank results and 0-0). Say so rather than show a 0-0 or call it off-season.
+      sports.push({ ...shape(sp, smCur, "in", curSeason, curUrl), w: null, l: null, t: null, conf: null, streak: null, last: null,
+        notes: "In season, but the school's schedule page hasn't posted results yet." });
     } else {
       const smPrev = prev ? summarize(sp, prev.events, prev.record, today) : null;
       const out = smPrev ? shape(sp, smPrev, "off", prevSeason, prevUrl) : { ...shape(sp, { finishes: [] }, "off", prevSeason, prevUrl), w: null, l: null };
