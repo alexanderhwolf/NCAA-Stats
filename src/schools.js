@@ -1,4 +1,4 @@
-// The 16 Big 12 schools and the sports each one sponsors.
+// The Big 12 schools (current 16, plus former members for past seasons) and the sports each one sponsors.
 // Generated from the Oct 21, 2026 snapshot; edit by hand from here on.
 //
 // layer "espn": results come from ESPN's site JSON (see src/espn.js).
@@ -2399,10 +2399,358 @@ export const SCHOOLS = [
         "layer": "site"
       }
     ]
+  },
+  // Former members, for past seasons only (members through 2023-24; both left for the SEC).
+  // ESPN ids and women's soccer ids checked by team name through /probe, Oct 21, 2026; slugs from
+  // each site's sports menu the same day. Texas cross country has no slug of its own there.
+  {
+    "id": "texas",
+    "espnSoccerW": "20517",
+    "name": "Texas",
+    "nickname": "Longhorns",
+    "short": "TEX",
+    "bg": "#BF5700",
+    "ink": "#ffffff",
+    "domain": "texaslonghorns.com",
+    "platform": "sidearm",
+    "espnId": 251,
+    "joined": 1996,
+    "lastYear": 2023,
+    "sports": [
+      {
+        "key": "football",
+        "slug": "football",
+        "name": "Football",
+        "g": "Men",
+        "kind": "h2h",
+        "layer": "espn",
+        "espn": "football"
+      },
+      {
+        "key": "mens-basketball",
+        "slug": "mens-basketball",
+        "name": "Basketball",
+        "g": "Men",
+        "kind": "h2h",
+        "layer": "espn",
+        "espn": "mens-basketball"
+      },
+      {
+        "key": "womens-basketball",
+        "slug": "womens-basketball",
+        "name": "Basketball",
+        "g": "Women",
+        "kind": "h2h",
+        "layer": "espn",
+        "espn": "womens-basketball"
+      },
+      {
+        "key": "womens-volleyball",
+        "slug": "womens-volleyball",
+        "name": "Volleyball",
+        "g": "Women",
+        "kind": "h2h",
+        "layer": "espn",
+        "espn": "womens-volleyball"
+      },
+      {
+        "key": "womens-soccer",
+        "slug": "womens-soccer",
+        "name": "Soccer",
+        "g": "Women",
+        "kind": "h2h",
+        "layer": "espn",
+        "espn": "womens-soccer"
+      },
+      {
+        "key": "softball",
+        "slug": "softball",
+        "name": "Softball",
+        "g": "Women",
+        "kind": "h2h",
+        "layer": "espn",
+        "espn": "softball"
+      },
+      {
+        "key": "baseball",
+        "slug": "baseball",
+        "name": "Baseball",
+        "g": "Men",
+        "kind": "h2h",
+        "layer": "espn",
+        "espn": "baseball"
+      },
+      {
+        "key": "mens-golf",
+        "slug": "mens-golf",
+        "name": "Golf",
+        "g": "Men",
+        "kind": "meet",
+        "layer": "site"
+      },
+      {
+        "key": "womens-golf",
+        "slug": "womens-golf",
+        "name": "Golf",
+        "g": "Women",
+        "kind": "meet",
+        "layer": "site"
+      },
+      {
+        "key": "mens-swimming-and-diving",
+        "slug": "mens-swimming-and-diving",
+        "name": "Swimming & Diving",
+        "g": "Men",
+        "kind": "h2h",
+        "layer": "site"
+      },
+      {
+        "key": "womens-swimming-and-diving",
+        "slug": "womens-swimming-and-diving",
+        "name": "Swimming & Diving",
+        "g": "Women",
+        "kind": "h2h",
+        "layer": "site"
+      },
+      {
+        "key": "mens-tennis",
+        "slug": "mens-tennis",
+        "name": "Tennis",
+        "g": "Men",
+        "kind": "h2h",
+        "layer": "site"
+      },
+      {
+        "key": "womens-tennis",
+        "slug": "womens-tennis",
+        "name": "Tennis",
+        "g": "Women",
+        "kind": "h2h",
+        "layer": "site"
+      },
+      {
+        "key": "womens-rowing",
+        "slug": "womens-rowing",
+        "name": "Rowing",
+        "g": "Women",
+        "kind": "meet",
+        "layer": "site"
+      },
+      {
+        "key": "wbvball",
+        "slug": "wbvball",
+        "name": "Beach Volleyball",
+        "g": "Women",
+        "kind": "h2h",
+        "layer": "site"
+      },
+      {
+        "key": "track-and-field:m",
+        "slug": "track-and-field",
+        "name": "Track & Field",
+        "g": "Men",
+        "kind": "meet",
+        "layer": "site"
+      },
+      {
+        "key": "track-and-field:w",
+        "slug": "track-and-field",
+        "name": "Track & Field",
+        "g": "Women",
+        "kind": "meet",
+        "layer": "site"
+      }
+    ]
+  },
+  {
+    "id": "oklahoma",
+    "espnSoccerW": "20490",
+    "name": "Oklahoma",
+    "nickname": "Sooners",
+    "short": "OU",
+    "bg": "#841617",
+    "ink": "#ffffff",
+    "domain": "soonersports.com",
+    "platform": "sidearm",
+    "espnId": 201,
+    "joined": 1996,
+    "lastYear": 2023,
+    "sports": [
+      {
+        "key": "football",
+        "slug": "football",
+        "name": "Football",
+        "g": "Men",
+        "kind": "h2h",
+        "layer": "espn",
+        "espn": "football"
+      },
+      {
+        "key": "mens-basketball",
+        "slug": "mens-basketball",
+        "name": "Basketball",
+        "g": "Men",
+        "kind": "h2h",
+        "layer": "espn",
+        "espn": "mens-basketball"
+      },
+      {
+        "key": "womens-basketball",
+        "slug": "womens-basketball",
+        "name": "Basketball",
+        "g": "Women",
+        "kind": "h2h",
+        "layer": "espn",
+        "espn": "womens-basketball"
+      },
+      {
+        "key": "volleyball",
+        "slug": "volleyball",
+        "name": "Volleyball",
+        "g": "Women",
+        "kind": "h2h",
+        "layer": "espn",
+        "espn": "womens-volleyball"
+      },
+      {
+        "key": "soccer",
+        "slug": "soccer",
+        "name": "Soccer",
+        "g": "Women",
+        "kind": "h2h",
+        "layer": "espn",
+        "espn": "womens-soccer"
+      },
+      {
+        "key": "softball",
+        "slug": "softball",
+        "name": "Softball",
+        "g": "Women",
+        "kind": "h2h",
+        "layer": "espn",
+        "espn": "softball"
+      },
+      {
+        "key": "baseball",
+        "slug": "baseball",
+        "name": "Baseball",
+        "g": "Men",
+        "kind": "h2h",
+        "layer": "espn",
+        "espn": "baseball"
+      },
+      {
+        "key": "mens-golf",
+        "slug": "mens-golf",
+        "name": "Golf",
+        "g": "Men",
+        "kind": "meet",
+        "layer": "site"
+      },
+      {
+        "key": "womens-golf",
+        "slug": "womens-golf",
+        "name": "Golf",
+        "g": "Women",
+        "kind": "meet",
+        "layer": "site"
+      },
+      {
+        "key": "mens-gymnastics",
+        "slug": "mens-gymnastics",
+        "name": "Gymnastics",
+        "g": "Men",
+        "kind": "h2h",
+        "layer": "site"
+      },
+      {
+        "key": "womens-gymnastics",
+        "slug": "womens-gymnastics",
+        "name": "Gymnastics",
+        "g": "Women",
+        "kind": "h2h",
+        "layer": "site"
+      },
+      {
+        "key": "mens-tennis",
+        "slug": "mens-tennis",
+        "name": "Tennis",
+        "g": "Men",
+        "kind": "h2h",
+        "layer": "site"
+      },
+      {
+        "key": "womens-tennis",
+        "slug": "womens-tennis",
+        "name": "Tennis",
+        "g": "Women",
+        "kind": "h2h",
+        "layer": "site"
+      },
+      {
+        "key": "wrestling",
+        "slug": "wrestling",
+        "name": "Wrestling",
+        "g": "Men",
+        "kind": "h2h",
+        "layer": "site"
+      },
+      {
+        "key": "rowing",
+        "slug": "rowing",
+        "name": "Rowing",
+        "g": "Women",
+        "kind": "meet",
+        "layer": "site"
+      },
+      {
+        "key": "cross-country:m",
+        "slug": "cross-country",
+        "name": "Cross Country",
+        "g": "Men",
+        "kind": "meet",
+        "layer": "site"
+      },
+      {
+        "key": "cross-country:w",
+        "slug": "cross-country",
+        "name": "Cross Country",
+        "g": "Women",
+        "kind": "meet",
+        "layer": "site"
+      },
+      {
+        "key": "track-and-field:m",
+        "slug": "track-and-field",
+        "name": "Track & Field",
+        "g": "Men",
+        "kind": "meet",
+        "layer": "site"
+      },
+      {
+        "key": "track-and-field:w",
+        "slug": "track-and-field",
+        "name": "Track & Field",
+        "g": "Women",
+        "kind": "meet",
+        "layer": "site"
+      }
+    ]
   }
 ];
 
 export const BY_ID = Object.fromEntries(SCHOOLS.map(s => [s.id, s]));
+
+// Big 12 membership by academic start year (2016 = 2016-17). Joined: first season as a member.
+// TCU and West Virginia joined for 2012-13; BYU, Cincinnati, Houston and UCF for 2023-24;
+// Arizona, Arizona State, Colorado and Utah for 2024-25; Texas and Oklahoma's last season was 2023-24.
+const JOINED = { tcu: 2012, "west-virginia": 2012, byu: 2023, cincinnati: 2023, houston: 2023, ucf: 2023,
+  arizona: 2024, "arizona-state": 2024, colorado: 2024, utah: 2024 };
+for (const s of SCHOOLS) s.joined ??= JOINED[s.id] ?? 1996;
+export const memberIn = (school, Y) => Y >= school.joined && (school.lastYear == null || Y <= school.lastYear);
+export const membersIn = Y => SCHOOLS.filter(s => memberIn(s, Y));
+// How far back the year selector goes.
+export const HISTORY_YEARS = 10;
 
 // The ESPN team id this school uses for a given ESPN sport key.
 export function espnTeamId(school, espnSport) {

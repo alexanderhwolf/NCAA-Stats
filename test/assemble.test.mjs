@@ -56,7 +56,7 @@ test("queue: layer caps, one page per school site, spread across schools", () =>
 });
 
 test("soccer uses ESPN's soccer team ids", () => {
-  const src = sourcesFor(today).filter(s => s.school === "arizona" && s.ref === "womens-soccer");
+  const src = sourcesFor(today).filter(s => s.school === "arizona" && s.layer === "espn" && s.ref === "womens-soccer");
   assert.ok(src.every(s => s.url.includes("/teams/20503/")));
 });
 

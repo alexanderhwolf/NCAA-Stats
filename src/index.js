@@ -1,9 +1,10 @@
 // big12-board Worker: a cron that refreshes records into D1, a small JSON API,
 // and the static page (public/) served as Workers static assets.
 
-import { runBatch, rebuildDocs, UA } from "./refresh.js";
-import { SCHOOLS } from "./schools.js";
-import { localDate } from "./season.js";
+import { runBatch, rebuildDocs, rebuildSeasons, UA } from "./refresh.js";
+import { SCHOOLS, membersIn, HISTORY_YEARS } from "./schools.js";
+import { localDate, startYear } from "./season.js";
+import { sourcesFor } from "./sources.js";
 
 const json = (body, init = {}) => new Response(JSON.stringify(body), {
   ...init,
@@ -32,6 +33,22 @@ async function probe(request, env) {
   await env.DB.prepare("INSERT OR REPLACE INTO probe (url, status, ctype, bytes, body, fetched_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)")
     .bind(target.href, status, ctype, body.length, body.slice(0, 1_500_000), Date.now()).run();
   return json({ url: target.href, status, ctype, bytes: body.length, ms: Date.now() - t0, error, stored: true });
+}
+
+// A finished season: that year's members, whatever documents are built so far, and how much
+// of the season's pages the backfill has collected, so the page can say it's still filling in.
+async function season(env, y) {
+  const today = localDate(), Y = startYear(today);
+  if (!(y >= Y - HISTORY_YEARS && y < Y)) return json({ error: "year out of range" }, { status: 400 });
+  const members = membersIn(y).map(s => s.id);
+  const { results } = await env.DB.prepare("SELECT school, json FROM hist_docs WHERE year = ?1").bind(y).all();
+  const order = new Map(SCHOOLS.map((s, i) => [s.id, i]));
+  const docs = results.filter(r => members.includes(r.school)).sort((a, b) => order.get(a.school) - order.get(b.school));
+  const keys = sourcesFor(today).filter(s => s.phase === "hist" ? s.Y === y : y === Y - 1 && s.phase === "prev" && !s.reg).map(s => s.key);
+  const tag = y === Y - 1 ? "|prev" : `|y${y}`;
+  const done = (await env.DB.prepare("SELECT COUNT(*) AS n FROM pages WHERE last_attempt IS NOT NULL AND instr(key, ?1) > 0").bind(tag).first())?.n || 0;
+  const body = `{"year":${y},"members":${JSON.stringify(members)},"progress":${JSON.stringify({ done: Math.min(done, keys.length), total: keys.length })},"schools":[${docs.map(r => r.json).join(",")}]}`;
+  return new Response(body, { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=300", "access-control-allow-origin": "*" } });
 }
 
 async function schools(env) {
@@ -63,15 +80,23 @@ async function status(env) {
 export default {
   async fetch(request, env, ctx) {
     const { pathname } = new URL(request.url);
-    if (pathname === "/api/schools") return schools(env);
+    if (pathname === "/api/schools") {
+      const yq = new URL(request.url).searchParams.get("year");
+      const Y = startYear(localDate());
+      return yq && +yq !== Y ? season(env, +yq) : schools(env);
+    }
     if (pathname === "/api/status") return status(env);
     if (pathname === "/probe") return probe(request, env);
     if (pathname === "/api/refresh" && request.method === "POST" && env.ADMIN_KEY && request.headers.get("x-admin-key") === env.ADMIN_KEY) {
       return json({ fetched: await runBatch(env) });
     }
     if (pathname === "/api/rebuild" && request.method === "POST" && env.ADMIN_KEY && request.headers.get("x-admin-key") === env.ADMIN_KEY) {
-      await rebuildDocs(env, SCHOOLS.map(s => s.id));
-      return json({ rebuilt: SCHOOLS.length });
+      const Y = startYear(localDate());
+      await rebuildDocs(env, membersIn(Y).map(s => s.id));
+      const pairs = [];
+      for (let y = Y - HISTORY_YEARS; y < Y; y++) for (const s of membersIn(y)) pairs.push({ id: s.id, y });
+      for (let i = 0; i < pairs.length; i += 10) await rebuildSeasons(env, pairs.slice(i, i + 10));
+      return json({ rebuilt: membersIn(Y).length, seasons: pairs.length });
     }
     return env.ASSETS.fetch(request);
   },

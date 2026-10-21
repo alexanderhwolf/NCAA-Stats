@@ -5,9 +5,9 @@
 import { sourcesFor } from "./sources.js";
 import { parseEspnSchedule } from "./espn.js";
 import { parseSidearm, parseRegular } from "./sidearm.js";
-import { BY_ID, SCHOOLS, espnTeamId } from "./schools.js";
-import { localDate } from "./season.js";
-import { assembleSchool } from "./assemble.js";
+import { BY_ID, espnTeamId, membersIn, HISTORY_YEARS } from "./schools.js";
+import { localDate, startYear } from "./season.js";
+import { assembleSchool, assembleSeason } from "./assemble.js";
 
 export const UA = "Mozilla/5.0 (compatible; Big12RecordsBoard/1.0; +https://github.com/alexanderhwolf/ncaa-stats)";
 
@@ -26,12 +26,18 @@ export function pickDue(sources, rows, now, caps = { espn: 1, site: 2 }, perHost
     if (!r || r.url !== s.url || r.last_attempt == null) { due.push({ s, at: 0 }); continue; }
     const backoff = r.fail_count ? Math.min(2 ** r.fail_count, 16) : 1;
     // Failures retry sooner than a full TTL but back off: 30 min, 1 h, 2 h ... capped.
-    const wait = r.fail_count ? Math.min(30 * backoff, s.ttl) : s.ttl;
+    // A past season's page that's simply not there (404: the program didn't exist yet) won't
+    // appear later, so it waits the full TTL instead of retrying.
+    const gone = s.phase === "hist" && r.last_status === 404;
+    const wait = r.fail_count && !gone ? Math.min(30 * backoff, s.ttl) : s.ttl;
     if (now - r.last_attempt >= wait * 60_000) due.push({ s, at: r.last_attempt });
   }
-  // Oldest first; among equals, current regular season before postseason before last season.
+  // Past seasons (backfill) only use what's left after current and last season.
+  // Then oldest first; among equals, current regular season before postseason before last season.
+  const hist = s => (s.phase === "hist" ? 1 : 0);
   const rank = s => (s.phase === "cur" ? 0 : 2) + (s.key.endsWith("|3") ? 1 : 0);
-  due.sort((a, b) => a.at - b.at || rank(a.s) - rank(b.s) || h32(a.s.key) - h32(b.s.key));
+  // Backfill fills the most recent seasons first, so the year selector fills in from the top.
+  due.sort((a, b) => hist(a.s) - hist(b.s) || (hist(a.s) ? b.s.Y - a.s.Y : 0) || a.at - b.at || rank(a.s) - rank(b.s) || h32(a.s.key) - h32(b.s.key));
   const hosts = new Map(), layers = new Map();
   const pick = [];
   for (const { s } of due) {
@@ -47,12 +53,12 @@ export function pickDue(sources, rows, now, caps = { espn: 1, site: 2 }, perHost
   return pick;
 }
 
-// Conference members' ESPN ids, per sport (soccer has its own id space).
-const confIds = sport => new Set(SCHOOLS.map(s => espnTeamId(s, sport)).filter(Boolean));
+// That season's conference members' ESPN ids, per sport (soccer has its own id space).
+const confIds = (sport, Y) => new Set(membersIn(Y).map(s => espnTeamId(s, sport)).filter(Boolean));
 const CONF = {};
 
 export function parse(s, body) {
-  if (s.layer === "espn") return parseEspnSchedule(JSON.parse(body), s.teamId || espnTeamId(BY_ID[s.school], s.ref), CONF[s.ref] ??= confIds(s.ref));
+  if (s.layer === "espn") return parseEspnSchedule(JSON.parse(body), s.teamId || espnTeamId(BY_ID[s.school], s.ref), CONF[`${s.ref}|${s.Y}`] ??= confIds(s.ref, s.Y));
   if (s.reg) return parseRegular(body);
   return parseSidearm(body, { Y: s.Y, isFallBallSport: s.fam === "spring" });
 }
@@ -60,7 +66,7 @@ export function parse(s, body) {
 export async function runBatch(env, now = Date.now()) {
   const today = localDate(new Date(now));
   const sources = sourcesFor(today);
-  const { results: rows } = await env.DB.prepare("SELECT key, url, last_attempt, fail_count FROM pages").all();
+  const { results: rows } = await env.DB.prepare("SELECT key, url, last_attempt, fail_count, last_status FROM pages").all();
   const pick = pickDue(sources, rows, now, { espn: Number(env.ESPN_PER_RUN || 1), site: Number(env.SITE_PER_RUN || 2) });
   for (const s of pick) {
     let status = 0, err = null, data = null;
@@ -91,16 +97,40 @@ export async function runBatch(env, now = Date.now()) {
          data = CASE WHEN excluded.url <> pages.url THEN excluded.data ELSE COALESCE(excluded.data, pages.data) END`
     ).bind(s.key, s.school, s.layer, s.ref, s.phase, s.url, s.ttl, now, data ? now : null, status, err, data ? 0 : 1, data).run();
   }
-  const touched = [...new Set(pick.map(s => s.school))];
-  await rebuildDocs(env, touched, today, now);
+  const Y = startYear(today);
+  const touched = [...new Set(pick.filter(s => s.phase !== "hist").map(s => s.school))];
+  await rebuildDocs(env, touched.filter(id => membersIn(Y).some(m => m.id === id)), today, now);
+  // Past-season documents: last season (prev pages) and older ones (hist pages).
+  const seasons = [...new Set(pick.filter(s => s.phase !== "cur").map(s => `${s.school}|${s.phase === "prev" ? Y - 1 : s.Y}`))];
+  const pairs = seasons.map(k => { const [id, y] = k.split("|"); return { id, y: +y }; });
+  // Plus a few season documents that don't exist yet (last season's, right after deploy).
+  const have = new Set((await env.DB.prepare("SELECT school || '|' || year AS k FROM hist_docs").all()).results.map(r => r.k));
+  const missing = [];
+  for (let y = Y - 1; y >= Y - HISTORY_YEARS && missing.length < 3; y--) for (const m of membersIn(y)) if (!have.has(`${m.id}|${y}`) && missing.length < 3) missing.push({ id: m.id, y });
+  await rebuildSeasons(env, [...pairs, ...missing], today, now);
   return pick.map(s => s.key);
+}
+
+// Re-assemble finished-season documents ({ id, y } pairs) into hist_docs.
+export async function rebuildSeasons(env, pairs, today = localDate(), now = Date.now()) {
+  const Y = startYear(today);
+  const stmts = [];
+  for (const { id, y } of pairs) {
+    const school = BY_ID[id];
+    if (!school || y >= Y) continue;
+    const like = y === Y - 1 ? `${id}|%|prev%` : `${id}|%|y${y}%`;
+    const { results } = await env.DB.prepare("SELECT key, url, last_ok, last_status, last_error, fail_count, data FROM pages WHERE key LIKE ?1").bind(like).all();
+    const doc = assembleSeason(school, results, y, Y, today);
+    stmts.push(env.DB.prepare("INSERT OR REPLACE INTO hist_docs (school, year, json, updated_at) VALUES (?1, ?2, ?3, ?4)").bind(id, y, JSON.stringify(doc), now));
+  }
+  if (stmts.length) await env.DB.batch(stmts);
 }
 
 // Re-assemble the given schools' documents from their stored pages.
 export async function rebuildDocs(env, schoolIds, today = localDate(), now = Date.now()) {
   const stmts = [];
   for (const id of schoolIds) {
-    const { results } = await env.DB.prepare("SELECT key, url, last_ok, last_error, fail_count, data FROM pages WHERE school = ?1").bind(id).all();
+    const { results } = await env.DB.prepare("SELECT key, url, last_ok, last_error, fail_count, data FROM pages WHERE school = ?1 AND phase IN ('cur', 'prev')").bind(id).all();
     const doc = assembleSchool(BY_ID[id], results, today);
     stmts.push(env.DB.prepare("INSERT OR REPLACE INTO docs (school, json, updated_at) VALUES (?1, ?2, ?3)").bind(id, JSON.stringify(doc), now));
   }

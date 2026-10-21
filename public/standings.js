@@ -14,7 +14,9 @@ window.B12 = (() => {
     { name: "Volleyball", g: "Women" },
     { name: "Soccer", g: "Women" },
   ];
-  const isRecord = s => s && s.kind === "h2h" && s.status === "in" && Number.isFinite(s.w) && Number.isFinite(s.l);
+  // "in" = in season now; "final" = a finished season shown through the year selector.
+  const live = s => s.status === "in" || s.status === "final";
+  const isRecord = s => s && s.kind === "h2h" && live(s) && Number.isFinite(s.w) && Number.isFinite(s.l);
   const pct = (w, l, t = 0) => { const n = w + l + t; return n ? (w + t / 2) / n : null; };
   const label = s => (s.g === "Coed" ? "" : s.g + "'s ") + s.name.toLowerCase();
   const key = s => `${s.g}|${s.name}`;
@@ -58,7 +60,7 @@ window.B12 = (() => {
     } else {
       for (const s of sports) {
         if (isRecord(s)) counted.push(s);
-        else if (s.kind === "h2h" && s.status === "in") missing.push({ name: s.name, g: s.g, reason: "record not available yet" });
+        else if (s.kind === "h2h" && live(s)) missing.push({ name: s.name, g: s.g, reason: "record not available yet" });
       }
     }
     const { w, l, t } = tally(counted);
@@ -94,7 +96,7 @@ window.B12 = (() => {
     if (!rows.length) return "";
     const d = rows[0].d, info = d.commonInfo;
     const what = info.keep.length
-      ? `Common counts only ${esc(commonNames(d))}, the sport${info.keep.length === 1 ? "" : "s"} every school has a record in right now, so it's the equal comparison.`
+      ? `Common counts only ${esc(commonNames(d))}, the sport${info.keep.length === 1 ? "" : "s"} every school has a record in, so it's the equal comparison.`
       : `Common is blank until one sport has a record at every school.`;
     if (scope === "all") {
       const ns = rows.map(r => r.d.n);

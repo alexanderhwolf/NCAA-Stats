@@ -1,7 +1,7 @@
 // Turns stored page rows into one document per school, in the same shape the page reads:
 // { id, school, nickname, site, asOf, sports: [...], week: [...], unverified: [...] }.
 
-import { SCHOOLS } from "./schools.js";
+import { membersIn } from "./schools.js";
 import { family, sidearmSeason, startYear, addDays } from "./season.js";
 import { mergePlacings } from "./sidearm.js";
 
@@ -68,12 +68,12 @@ function shape(sport, sm, phase, season, source) {
     status: phase, season,
     w: meet ? null : sm.w, l: meet ? null : sm.l, t: meet ? null : sm.t,
     conf: meet ? null : sm.conf, confName: !meet && sm.conf ? "Conf" : null,
-    streak: meet || phase === "off" ? null : sm.streak,
+    streak: meet || phase !== "in" ? null : sm.streak,
     last: !meet && sm.lastGame ? { date: sm.lastGame.date, opp: sm.lastGame.opp, at: sm.lastGame.at, result: sm.lastGame.result } : null,
     next: ev(sm.next),
     finishes: meet ? sm.finishes : null,
     pending: phase === "in" ? (sm.pending || []) : [],
-    summary: phase === "off" ? finalNote(sport, sm) : null, notes: null, source,
+    summary: phase !== "in" ? finalNote(sport, sm) : null, notes: null, source,
   };
 }
 
@@ -182,10 +182,69 @@ export function assembleSchool(school, rows, today) {
   };
 }
 
+// A finished season (y, an academic start year before the current one), every sport final.
+// Last season reads the "prev" pages the current board already keeps; older seasons read the
+// "y<year>" history pages (src/sources.js historySources). status is "final" throughout.
+export function assembleSeason(school, rows, y, Ycur, today) {
+  const isPrev = y === Ycur - 1;
+  const tag = isPrev ? "prev" : `y${y}`;
+  const byKey = new Map(rows.map(r => [r.key, r]));
+  const data = k => { const r = byKey.get(k); try { return r?.data ? JSON.parse(r.data) : null; } catch { return null; } };
+  const shared = new Set(school.sports.filter((s, i, a) => a.findIndex(x => x.slug === s.slug) !== i).map(s => s.slug));
+  const sports = [], unverified = [];
+  const season = `${y}-${String((y + 1) % 100).padStart(2, "0")}`;
+  for (const sp of school.sports) {
+    const fam = family(sp);
+    const label = sp.g === "Coed" ? sp.name : `${sp.g}'s ${sp.name.toLowerCase()}`;
+    const sideSeason = sidearmSeason(fam, y);
+    // Which pages hold this sport for this season.
+    const useEspn = sp.layer === "espn" && (isPrev || school.platform !== "sidearm");
+    let keys;
+    if (useEspn) keys = [2, 3].map(st => `${school.id}|espn|${sp.espn}|${tag}|${st}`);
+    else if (school.platform === "sidearm") keys = [`${school.id}|site|${sp.slug}|${tag}`];
+    else {
+      sports.push({ ...shape(sp, { finishes: [] }, "final", season, null), w: null, l: null, notes: "This school's site isn't supported yet." });
+      continue;
+    }
+    const got = keys.map(k => ({ row: byKey.get(k), d: data(k) }));
+    let d = null;
+    const ds = got.map(x => x.d).filter(Boolean);
+    if (ds.length) {
+      d = useEspn ? { events: dedupe(ds.flatMap(x => x.events)), record: null } : ds[0];
+      if (!useEspn && shared.has(sp.slug)) d = { ...d, events: d.events.filter(e => !e.g || e.g === sp.g), record: null };
+    }
+    const url = got.find(x => x.row)?.row.url || null;
+    // A school page asked for an old season sometimes answers with a different one.
+    let why = null;
+    if (d && !useEspn && d.label && !d.label.includes(sideSeason)) { why = `the school's page didn't have ${sideSeason}`; d = null; }
+    if (!d) {
+      const bad = got.map(x => x.row).find(r => r && r.last_error);
+      if (!why) why = !got.some(x => x.row) ? "not fetched yet"
+        : bad?.last_status === 404 ? `no schedule page for ${sideSeason} (the program may not have existed then)`
+        : bad ? `source failing (${bad.last_error})` : "not fetched yet";
+      unverified.push(`${label}: ${why}`);
+      sports.push({ ...shape(sp, { finishes: [] }, "final", season, url), w: null, l: null, notes: why === "not fetched yet" ? "Still collecting this season." : "Not available for this season." });
+      continue;
+    }
+    const sm = summarize(sp, d.events, d.record, today);
+    const out = { ...shape(sp, sm, "final", season, url), next: null, last: null };
+    if (sp.kind === "h2h" && !sm.hasResults) {
+      Object.assign(out, { w: null, l: null, t: null, conf: null, notes: "No results posted for this season." });
+    }
+    sports.push(out);
+  }
+  const okTimes = rows.map(r => r.last_ok).filter(Boolean);
+  return {
+    id: school.id, school: school.name, nickname: school.nickname, site: `https://${school.domain}`,
+    year: y, season, asOf: okTimes.length ? new Date(Math.max(...okTimes)).toISOString() : null,
+    sports, week: [], unverified,
+  };
+}
+
 export function assembleAll(rows, today) {
   const by = new Map();
   for (const r of rows) (by.get(r.school) || by.set(r.school, []).get(r.school)).push(r);
-  const schools = SCHOOLS.map(s => assembleSchool(s, by.get(s.id) || [], today));
+  const schools = membersIn(startYear(today)).map(s => assembleSchool(s, by.get(s.id) || [], today));
   const okTimes = rows.map(r => r.last_ok).filter(Boolean);
   return { asOf: okTimes.length ? new Date(Math.max(...okTimes)).toISOString() : null, today, schools };
 }

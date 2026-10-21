@@ -42,6 +42,11 @@ h1 { font-family: var(--display); font-weight: 700; font-size: clamp(32px, 7vw, 
 main.wrap { padding-block: 22px 48px; display: grid; gap: 30px; grid-template-columns: minmax(0, 1fr); }
 main.wrap > *, #school > *, .gender-block > * { min-width: 0; }
 .yr { color: var(--muted); font-weight: 600; }
+.hdr-r { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.yrsel { display: flex; align-items: center; gap: 8px; font-family: var(--display); font-size: 15px; letter-spacing: .08em; text-transform: uppercase; }
+.yrsel select { font: 600 15px var(--body); color: var(--head-ink); background: transparent; border: 1px solid color-mix(in srgb, var(--head-ink) 35%, transparent); border-radius: 3px; min-height: 36px; padding: 0 8px; }
+.yrsel select option { color: #1c1d20; background: #fff; }
+.prog { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--tie); border-radius: 6px; padding: 10px 14px; font-size: 14px; margin-bottom: 12px; }
 h2.sec { font-family: var(--display); font-weight: 700; font-size: clamp(24px, 4.5vw, 32px); text-transform: uppercase; letter-spacing: .03em; margin: 0 0 4px; }
 .lede { color: var(--muted); margin: 0 0 12px; max-width: 70ch; font-size: 14px; }
 .msg { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px; color: var(--muted); }
@@ -172,16 +177,20 @@ button:focus-visible, a:focus-visible, tr:focus-visible { outline: 2px solid var
   <div class="wrap">
     <div>
       <h1>Big 12 Records Board</h1>
-      <p class="sub">Every sport, all 16 schools: records, meet finishes and this week's schedule</p>
+      <p class="sub">Every sport at every Big 12 school: records, meet finishes and this week's schedule, now and for the last 10 seasons</p>
     </div>
-    <div class="asof" id="asof">Loading…</div>
+    <div class="hdr-r">
+      <label class="yrsel"><span>Season</span><select id="yr" aria-label="Season"></select></label>
+      <div class="asof" id="asof">Loading…</div>
+    </div>
   </div>
 </header>
 
 <main class="wrap">
   <section aria-labelledby="sc-h">
     <h2 class="sec" id="sc-h">Department scorecard <span id="sc-yr" class="yr"></span></h2>
-    <p class="lede"><span id="sc-asof"></span> Combined head-to-head record for sports in season now. Football, volleyball and soccer is the fairest comparison; "all confirmed" adds every men's and women's sport with a confirmed record. Common counts only the sports every school has a record in, so it compares like with like. Tap ⓘ to see what counted, or a school to open it.</p>
+    <p class="lede"><span id="sc-asof"></span> <span id="sc-what"></span> Football, volleyball and soccer is the fairest comparison; "all confirmed" adds every men's and women's sport with a confirmed record. Common counts only the sports every school has a record in, so it compares like with like. Tap ⓘ to see what counted, or a school to open it.</p>
+    <div id="progress"></div>
     <div id="scorecard"><div class="msg">Loading data…</div></div>
   </section>
 
@@ -213,11 +222,20 @@ const SCHOOLS = [
   { id: "tcu", name: "TCU", short: "TCU", bg: "#4D1979", ink: "#ffffff" },
   { id: "texas-tech", name: "Texas Tech", short: "TTU", bg: "#CC0000", ink: "#ffffff" },
   { id: "utah", name: "Utah", short: "UTAH", bg: "#BE0000", ink: "#ffffff" },
-  { id: "west-virginia", name: "West Virginia", short: "WVU", bg: "#002855", ink: "#EAAA00" }
+  { id: "west-virginia", name: "West Virginia", short: "WVU", bg: "#002855", ink: "#EAAA00" },
+  // Former members (through 2023–24), shown only for seasons they were in the conference.
+  { id: "texas", name: "Texas", short: "TEX", bg: "#BF5700", ink: "#ffffff" },
+  { id: "oklahoma", name: "Oklahoma", short: "OU", bg: "#841617", ink: "#ffffff" }
 ];
 const BY_ID = Object.fromEntries(SCHOOLS.map(s => [s.id, s]));
 
-const state = { data: {}, info: null, sel: null, sortKey: "pct", sortDir: "desc", scope: "core", open: null, gf: "all", sport: "" };
+const state = { data: {}, info: null, sel: null, sortKey: "pct", sortDir: "desc", scope: "core", open: null, gf: "all", sport: "", year: null, members: null, progress: null, cache: {} };
+// Seasons are academic start years: 2026 = 2026–27. The selector goes back 10 seasons.
+const CUR_Y = (() => { const t = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago" }).format(new Date()); const y = +t.slice(0, 4); return +t.slice(5, 7) >= 7 ? y : y - 1; })();
+const YEARS = Array.from({ length: 11 }, (_, i) => CUR_Y - i);
+const yLabel = y => `${y}–${String((y + 1) % 100).padStart(2, "0")}`;
+const isPast = () => state.year != null && state.year !== CUR_Y;
+const members = () => SCHOOLS.filter(s => state.members ? state.members.includes(s.id) : state.data[s.id] || !["texas", "oklahoma"].includes(s.id));
 
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -247,7 +265,7 @@ function dept(id, scope) {
 
 function renderScorecard() {
   const box = document.getElementById("scorecard");
-  const rows = SCHOOLS.map(s => ({ s, d: dept(s.id) })).filter(r => r.d);
+  const rows = members().map(s => ({ s, d: dept(s.id) })).filter(r => r.d);
   if (!rows.length) { box.innerHTML = `<div class="msg">No data yet.</div>`; return; }
   const k = state.sortKey, dir = state.sortDir === "desc" ? -1 : 1;
   const val = r => k === "name" ? r.s.name : k === "wins" ? r.d.w : k === "common" ? (r.d.common ?? -1) : (r.d.pct ?? -1);
@@ -272,7 +290,7 @@ function info(key, label) { return `<button type="button" class="info" data-info
 
 function renderPicker() {
   const nav = document.getElementById("picker");
-  nav.innerHTML = SCHOOLS.map(s => `<button type="button" data-id="${s.id}" aria-pressed="${state.sel === s.id}" style="--sc:${s.bg};--sc-ink:${s.ink}" title="${esc(s.name)}">${esc(s.short)}</button>`).join("");
+  nav.innerHTML = members().map(s => `<button type="button" data-id="${s.id}" aria-pressed="${state.sel === s.id}" style="--sc:${s.bg};--sc-ink:${s.ink}" title="${esc(s.name)}">${esc(s.short)}</button>`).join("");
 }
 
 function recordTile(s) {
@@ -320,16 +338,23 @@ function noteBox(s) {
 }
 
 const GROUPS = [
+  { title: "Head-to-head", lede: "Final record for the season, from the school's own schedule page where it's readable. Exhibitions excluded.", test: s => s.status === "final" && s.kind === "h2h", render: recordTile },
+  { title: "Multi-team events", lede: "Golf, cross country and other meet sports: team finishes that season.", test: s => s.status === "final" && s.kind === "meet", render: meetTile },
   { title: "In season · head-to-head", lede: "Current season, overall record from the school's schedule page. Exhibitions excluded.", test: s => s.status === "in" && s.kind === "h2h", render: recordTile },
   { title: "In season · multi-team events", lede: "Golf, cross country and other meet sports: team finishes this season.", test: s => s.status === "in" && s.kind === "meet", render: meetTile },
-  { title: "Off-season · last season", lede: "Not competing yet this season (or season over). Shows the most recent completed season.", test: s => s.status !== "in", render: s => s.kind === "meet" ? meetTile(s) : recordTile(s) }
+  { title: "Off-season · last season", lede: "Not competing yet this season (or season over). Shows the most recent completed season.", test: s => s.status === "off", render: s => s.kind === "meet" ? meetTile(s) : recordTile(s) }
 ];
 
 function renderSchool() {
   const box = document.getElementById("school");
   const s = BY_ID[state.sel];
   const d = s && state.data[s.id];
-  if (!d) { box.innerHTML = s ? `<div class="msg">No data for ${esc(s.name)} yet.</div>` : ""; return; }
+  if (s && state.members && !state.members.includes(s.id)) {
+    box.innerHTML = `<div class="msg">${esc(s.name)} wasn't in the Big 12 in ${yLabel(state.year)}. Pick a school above.</div>`; return;
+  }
+  if (!d) {
+    box.innerHTML = s ? `<div class="msg">${isPast() ? `${esc(s.name)}'s ${yLabel(state.year)} season hasn't been collected yet. It fills in over the next day or so.` : `No data for ${esc(s.name)} yet.`}</div>` : ""; return;
+  }
   box.style.setProperty("--sc", s.bg); box.style.setProperty("--sc-ink", s.ink);
   const dp = dept(s.id, "all");
   const t0 = todayCT(), range = `${fmtDow(t0)} – ${fmtDow(plusDays(t0, 6))}`;
@@ -359,8 +384,8 @@ function renderSchool() {
 
   box.innerHTML = `
     <div class="band"><div><h2>${esc(d.school)} ${esc(d.nickname || "")}</h2></div>
-      <div class="facts"><span><b>${recStr(dp.w, dp.l, dp.t)}</b>${esc(seasonLabel())} so far</span><span><b>${pctStr(dp.pct)}</b>pct</span></div></div>
-    <div><h2 class="sec">This week</h2><p class="lede">${esc(range)}, every sport.</p>${weekHtml}</div>
+      <div class="facts"><span><b>${recStr(dp.w, dp.l, dp.t)}</b>${isPast() ? esc(yLabel(state.year)) + " final" : esc(seasonLabel()) + " so far"}</span><span><b>${pctStr(dp.pct)}</b>pct</span></div></div>
+    ${isPast() ? "" : `<div><h2 class="sec">This week</h2><p class="lede">${esc(range)}, every sport.</p>${weekHtml}</div>`}
     ${filters}
     <div id="tiles"></div>
     ${unv ? `<details><summary>Not available right now (${(d.unverified || []).length})</summary><ul>${unv}</ul></details>` : ""}
@@ -399,11 +424,16 @@ function renderTiles() {
 
 function renderAll() {
   const asof = state.info?.asOf;
-  document.getElementById("asof").textContent = asof
+  document.getElementById("asof").textContent = isPast() ? "Season final" : asof
     ? "Updated · " + new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/Chicago", timeZoneName: "short" }).format(new Date(asof))
     : "No data yet";
-  document.getElementById("sc-yr").textContent = "· " + seasonLabel();
-  document.getElementById("sc-asof").textContent = `${seasonLabel()} season to date, as of ${fmtD(todayCT())}.`;
+  const past = isPast();
+  document.getElementById("sc-yr").textContent = "· " + (past ? yLabel(state.year) + " final" : seasonLabel());
+  document.getElementById("sc-asof").textContent = past ? `Final records for ${yLabel(state.year)}, with the Big 12 as it was that season.` : `${seasonLabel()} season to date, as of ${fmtD(todayCT())}.`;
+  document.getElementById("sc-what").textContent = past ? "Combined head-to-head record for the whole season." : "Combined head-to-head record for sports in season now.";
+  const pg = state.progress;
+  document.getElementById("progress").innerHTML = past && pg && pg.done < pg.total
+    ? `<div class="prog">Still collecting ${yLabel(state.year)}: ${pg.done} of ${pg.total} schedule pages read so far. Records fill in as they arrive; anything not read yet is marked as such, never guessed.</div>` : "";
   renderScorecard(); renderPicker(); renderSchool(); syncAlt();
 }
 function syncAlt() { document.querySelectorAll("a.alt").forEach(a => { a.href = a.getAttribute("href").split("#")[0] + "#" + state.sel; }); }
@@ -411,7 +441,7 @@ function syncAlt() { document.querySelectorAll("a.alt").forEach(a => { a.href = 
 function select(id, scroll) {
   if (!BY_ID[id]) return;
   state.sel = id;
-  try { history.replaceState(null, "", "#" + id); } catch (e) {}
+  setHash();
   renderScorecard(); renderPicker(); renderSchool(); syncAlt();
   if (scroll) document.getElementById("school").scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -445,13 +475,29 @@ document.addEventListener("keydown", e => {
   if (row && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); select(row.dataset.id, true); }
 });
 
-state.sel = BY_ID[location.hash.slice(1)] ? location.hash.slice(1) : "tcu";
+// The address carries the school and, for a past season, the season: #tcu or #tcu/2019-20.
+function setHash() { try { history.replaceState(null, "", "#" + state.sel + (isPast() ? "/" + yLabel(state.year).replace("–", "-") : "")); } catch (e) {} }
+{
+  const [h, yh] = location.hash.slice(1).split("/");
+  state.sel = BY_ID[h] ? h : "tcu";
+  const y = yh ? +yh.slice(0, 4) : null;
+  state.year = YEARS.includes(y) ? y : CUR_Y;
+}
+document.getElementById("yr").innerHTML = YEARS.map(y => `<option value="${y}"${y === state.year ? " selected" : ""}>${yLabel(y)}${y === CUR_Y ? " (now)" : ""}</option>`).join("");
 renderAll();
 
 async function load() {
+  const y = state.year;
   try {
-    const a = await fetch("/api/schools", { cache: "no-cache" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+    let a = state.cache[y];
+    if (!a || y === CUR_Y) {
+      a = await fetch(y === CUR_Y ? "/api/schools" : `/api/schools?year=${y}`, { cache: "no-cache" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+      state.cache[y] = a;
+    }
+    if (y !== state.year) return; // the selector moved on while this loaded
     state.data = Object.fromEntries(a.schools.map(s => [s.id, s]));
+    state.members = a.members || a.schools.map(x => x.id);
+    state.progress = a.progress || null;
     state.info = { asOf: a.asOf };
     renderAll();
   } catch (e) {
@@ -461,6 +507,14 @@ async function load() {
     }
   }
 }
+document.getElementById("yr").addEventListener("change", e => {
+  state.year = +e.target.value;
+  state.data = {}; state.members = null; state.progress = null; state.open = null;
+  setHash();
+  document.getElementById("scorecard").innerHTML = `<div class="msg">Loading ${yLabel(state.year)}…</div>`;
+  renderAll();
+  load();
+});
 load();
 // Pick up the next refresh when someone comes back to the tab.
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") load(); });

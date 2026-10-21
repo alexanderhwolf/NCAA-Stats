@@ -45,3 +45,13 @@ CREATE TABLE IF NOT EXISTS runs (
   picked   TEXT,
   error    TEXT
 );
+
+-- One assembled document per school per finished season (academic start year), for the
+-- year selector. Last season comes from the "prev" pages, older ones from "y<year>" pages.
+CREATE TABLE IF NOT EXISTS hist_docs (
+  school     TEXT NOT NULL,
+  year       INTEGER NOT NULL,
+  json       TEXT NOT NULL,
+  updated_at INTEGER NOT NULL,
+  PRIMARY KEY (school, year)
+);

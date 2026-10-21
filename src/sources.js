@@ -1,12 +1,13 @@
 // Every page the refresh queue knows about, derived from the school config and today's date.
 // Keys are stable across a season; the URL moves when the season rolls over.
 
-import { SCHOOLS, espnTeamId } from "./schools.js";
+import { SCHOOLS, espnTeamId, memberIn, HISTORY_YEARS } from "./schools.js";
 import { espnUrl, isSoccer } from "./espn.js";
 import { family, startYear, sidearmSeason, espnSeason } from "./season.js";
 
 export const TTL_CUR_MIN = 180;          // current season: every 3 hours
 export const TTL_PREV_MIN = 7 * 24 * 60; // finished season: weekly is plenty
+export const TTL_HIST_MIN = 60 * 24 * 60; // seasons before last: finished, so every 60 days
 export const TTL_POST_MIN = 24 * 60;     // current postseason list: daily (TODO: every 3 h during each sport's postseason)
 
 export function sourcesFor(today) {
@@ -17,6 +18,7 @@ export function sourcesFor(today) {
     for (const sp of s.sports) {
       const fam = family(sp);
       for (const [phase, y] of [["cur", Y], ["prev", Y - 1]]) {
+        if (!memberIn(s, y)) continue;
         const ttl = phase === "cur" ? TTL_CUR_MIN : TTL_PREV_MIN;
         if (sp.layer === "espn") {
           const teamId = espnTeamId(s, sp.espn);
@@ -41,6 +43,39 @@ export function sourcesFor(today) {
               key: `${s.id}|reg|${sp.slug}|cur`, school: s.id, layer: "site", ref: sp.slug, phase, ttl, reg: true,
               url: `https://${s.domain}/sports/${sp.slug}/schedule`, Y: y, fam,
             });
+          }
+        }
+      }
+    }
+  }
+  out.push(...historySources(Y));
+  return out;
+}
+
+// Seasons before last, back HISTORY_YEARS, for schools that were members that season.
+// Sidearm schools: every sport from the school's own text schedule, whose record line is the
+// school's official count. ESPN's older seasons are incomplete (TCU women's soccer 2016 lists
+// 5 matches), so ESPN is used only where the school site isn't readable, and those schools
+// only joined in 2023 or later.
+export function historySources(Y) {
+  const out = [];
+  for (let y = Y - HISTORY_YEARS; y <= Y - 2; y++) {
+    for (const s of SCHOOLS) {
+      if (!memberIn(s, y)) continue;
+      const seen = new Set();
+      for (const sp of s.sports) {
+        const fam = family(sp);
+        if (s.platform === "sidearm") {
+          if (seen.has(sp.slug)) continue;
+          seen.add(sp.slug);
+          out.push({ key: `${s.id}|site|${sp.slug}|y${y}`, school: s.id, layer: "site", ref: sp.slug, phase: "hist", ttl: TTL_HIST_MIN,
+            url: `https://${s.domain}/sports/${sp.slug}/schedule/text/${sidearmSeason(fam, y)}`, Y: y, fam });
+        } else if (sp.layer === "espn") {
+          const teamId = espnTeamId(s, sp.espn);
+          if (!teamId) continue;
+          for (const st of isSoccer(sp.espn) ? [2] : [2, 3]) {
+            out.push({ key: `${s.id}|espn|${sp.espn}|y${y}|${st}`, school: s.id, layer: "espn", ref: sp.espn, phase: "hist", ttl: TTL_HIST_MIN,
+              url: espnUrl(sp.espn, teamId, espnSeason(fam, y), st), Y: y, fam, teamId });
           }
         }
       }
