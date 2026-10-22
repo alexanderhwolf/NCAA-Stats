@@ -50,3 +50,10 @@ test("a WMT school's document reads every sport from its own site", () => {
   assert.deepEqual(golf.finishes.map(f => f.place), ["9th", "1st"]);
   assert.ok(!doc.sports.some(s => s.notes === "This school's site isn't supported yet."));
 });
+
+test("until a sport's WMT pages exist, stored ESPN pages stand in", () => {
+  const espn = JSON.stringify({ events: [{ date: "2026-09-01", result: "W 3-0", opp: "X", at: "Home" }, { date: "2026-11-01", result: null, opp: "Y", at: "Home" }], teamName: "BYU Cougars" });
+  const doc = assembleSchool(BY_ID.byu, [{ key: "byu|espn|womens-volleyball|cur|2", url: "u", last_ok: 1, data: espn }], "2026-10-21");
+  const vb = doc.sports.find(s => s.name === "Volleyball" && s.g === "Women");
+  assert.equal(`${vb.w}-${vb.l}`, "1-0");
+});

@@ -164,7 +164,10 @@ export function assembleSchool(school, rows, today) {
   for (const sp of school.sports) {
     const fam = family(sp);
     let cur, prev, curUrl, prevUrl, curRows, prevRows;
-    const isWmt = school.platform === "wmt";
+    // WMT schools read every sport from their own site; until a sport's WMT pages have been
+    // fetched at all (right after the switch), the ESPN pages already stored stand in.
+    const wmtFetched = school.platform === "wmt" && rows.some(r => r.key.startsWith(`${school.id}|wmt|${sp.slug}|`));
+    const isWmt = school.platform === "wmt" && (wmtFetched || sp.layer !== "espn");
     if (sp.layer === "espn" && !isWmt) {
       const k = ph => [2, 3].map(st => `${school.id}|espn|${sp.espn}|${ph}|${st}`);
       curRows = k("cur").map(x => byKey.get(x)).filter(Boolean);
