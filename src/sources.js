@@ -5,6 +5,7 @@ import { SCHOOLS, espnTeamId, memberIn, HISTORY_YEARS } from "./schools.js";
 import { espnUrl, isSoccer } from "./espn.js";
 import { wmtSchedulesUrl, wmtEventsUrl, scheduleFor } from "./wmt.js";
 import { STANDINGS, B12_HOST, standingsSeasonMatches } from "./big12.js";
+import { apiSportFor } from "./sidearmApi.js";
 import { family, startYear, sidearmSeason, espnSeason, addDays } from "./season.js";
 
 export const TTL_CUR_MIN = 180;          // current season: every 3 hours
@@ -73,12 +74,47 @@ export function sourcesFor(today) {
         url: `https://www.tfrrs.org/teams/xc/${slug}.html`, Y, fam: "fall" });
     }
   }
+  // Sidearm schools' API sport list (current schedule ids), for meet placings (sidearmApiSources).
+  for (const s of SCHOOLS) {
+    if (s.platform !== "sidearm" || !memberIn(s, Y)) continue;
+    out.push({ key: `${s.id}|sapi|sports|cat`, school: s.id, layer: "site", ref: "sports", phase: "cat", ttl: TTL_CAT_MIN, sapi: "sports",
+      url: `https://${s.domain}/api/v2/Sports`, Y, fam: "academic" });
+  }
   // Big 12 standings: one season list per sport; the season pages come from it at run time.
   for (const st of STANDINGS) {
     out.push({ key: `conf|b12|${st.path}|cat`, school: "conf", layer: "site", ref: st.path, phase: "cat", ttl: TTL_CAT_MIN, conf: "catalog",
       url: `https://${B12_HOST}${st.url}`, Y, fam: family(st) });
   }
   out.push(...historySources(Y));
+  return out;
+}
+
+// Sidearm API schedules for meet sports, which carry the placings the text pages leave out:
+// the sport's current schedule (whatever season the school has as current; assembly checks the
+// title), and last season's, whose id comes from last season's regular schedule page.
+export function sidearmApiSources(catalogs, idxRows, today) {
+  const Y = startYear(today), out = [];
+  const idx = new Map(idxRows.map(r => [r.key, r]));
+  for (const c of catalogs) {
+    const s = SCHOOLS.find(x => x.id === c.school);
+    if (!s || s.platform !== "sidearm") continue;
+    const seen = new Set();
+    for (const sp of s.sports) {
+      if (sp.kind !== "meet" || seen.has(sp.slug)) continue;
+      seen.add(sp.slug);
+      const api = apiSportFor(c.sports, sp);
+      if (!api) continue;
+      const fam = family(sp);
+      out.push({ key: `${s.id}|sapi|${sp.slug}|cur`, school: s.id, layer: "site", ref: sp.slug, phase: "cur", ttl: TTL_CUR_MIN, sapi: "schedule",
+        url: `https://${s.domain}/api/v2/Schedule/${api.scheduleId}`, Y, fam });
+      const ik = `${s.id}|sidx|${sp.slug}|prev`;
+      out.push({ key: ik, school: s.id, layer: "site", ref: sp.slug, phase: "prev", ttl: TTL_HIST_MIN, sidx: true,
+        url: `https://${s.domain}/sports/${sp.slug}/schedule/${sidearmSeason(fam, Y - 1)}`, Y: Y - 1, fam });
+      const prevId = idx.get(ik)?.scheduleId;
+      if (prevId) out.push({ key: `${s.id}|sapi|${sp.slug}|prev`, school: s.id, layer: "site", ref: sp.slug, phase: "prev", ttl: TTL_PREV_MIN, sapi: "schedule",
+        url: `https://${s.domain}/api/v2/Schedule/${prevId}`, Y: Y - 1, fam });
+    }
+  }
   return out;
 }
 

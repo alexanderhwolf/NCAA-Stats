@@ -2,7 +2,8 @@
 // Small batches on a frequent cron keep each run well inside the Workers CPU limit
 // and spread requests across school sites instead of bursting them.
 
-import { sourcesFor, tfrrsMeetSources, wmtEventSources, confStandingsSources } from "./sources.js";
+import { sourcesFor, tfrrsMeetSources, wmtEventSources, confStandingsSources, sidearmApiSources } from "./sources.js";
+import { parseSidearmSports, parseSidearmSchedule, scheduleIdFromPage } from "./sidearmApi.js";
 import { parseStandings } from "./big12.js";
 import { parseWmtSchedules, parseWmtEvents } from "./wmt.js";
 import { parseTeamPage, parseMeetPage } from "./tfrrs.js";
@@ -66,6 +67,9 @@ export function parse(s, body) {
   if (s.tfrrs === "team") return parseTeamPage(body);
   if (s.tfrrs === "meet") return parseMeetPage(body);
   if (s.conf) return parseStandings(body);
+  if (s.sapi === "sports") return parseSidearmSports(JSON.parse(body));
+  if (s.sapi === "schedule") return parseSidearmSchedule(JSON.parse(body));
+  if (s.sidx) return scheduleIdFromPage(body);
   if (s.wmt === "catalog") return parseWmtSchedules(JSON.parse(body));
   if (s.wmt === "events") return parseWmtEvents(JSON.parse(body), BY_ID[s.school].tz);
   return parseSidearm(body, { Y: s.Y, isFallBallSport: s.fam === "spring" });
@@ -80,6 +84,10 @@ export async function allSources(env, today) {
   sources.push(...tfrrsMeetSources(teamData, today));
   const { results: cats } = await env.DB.prepare("SELECT school, ref, data FROM pages WHERE key LIKE '%|wmt|cat-%' AND data IS NOT NULL").all();
   sources.push(...wmtEventSources(cats.map(r => { try { return { school: r.school, slug: r.ref, ...JSON.parse(r.data) }; } catch { return { school: r.school, slug: r.ref, schedules: [] }; } }), today));
+  const { results: sCats } = await env.DB.prepare("SELECT school, data FROM pages WHERE key LIKE '%|sapi|sports|cat' AND data IS NOT NULL").all();
+  const { results: sIdx } = await env.DB.prepare("SELECT key, data FROM pages WHERE key LIKE '%|sidx|%' AND data IS NOT NULL").all();
+  const parse1 = (d, fb) => { try { return JSON.parse(d); } catch { return fb; } };
+  sources.push(...sidearmApiSources(sCats.map(r => ({ school: r.school, ...parse1(r.data, { sports: [] }) })), sIdx.map(r => ({ key: r.key, ...parse1(r.data, {}) })), today));
   const { results: confCats } = await env.DB.prepare("SELECT ref, data FROM pages WHERE key LIKE 'conf|b12|%|cat' AND data IS NOT NULL").all();
   sources.push(...confStandingsSources(confCats.map(r => { try { return { path: r.ref, ...JSON.parse(r.data) }; } catch { return { path: r.ref, seasons: [] }; } }), today));
   return { sources, teamData };
@@ -99,7 +107,8 @@ export async function runBatch(env, now = Date.now()) {
         const parsed = parse(s, await res.text());
         // A regular page without event headings (other templates) is a valid, empty answer.
         if (s.conf === "season" && !parsed.rows.length) err = "no standings table found";
-        else if (s.layer === "site" && !s.reg && !s.tfrrs && !s.wmt && !s.conf && !parsed.events.length && !parsed.record.overall) err = "no schedule table found";
+        else if (s.sidx && !parsed.scheduleId) err = "no schedule id on the page";
+        else if (s.layer === "site" && !s.reg && !s.tfrrs && !s.wmt && !s.conf && !s.sapi && !s.sidx && !parsed.events.length && !parsed.record.overall) err = "no schedule table found";
         // A wrong team id returns some other school's schedule; never store it.
         else if (s.layer === "espn" && !teamMatches(BY_ID[s.school], parsed.teamName)) err = `wrong team (${parsed.teamName})`;
         else data = JSON.stringify(parsed);

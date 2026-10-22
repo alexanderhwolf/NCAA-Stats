@@ -19,6 +19,8 @@ Alex directs from his phone; Claude builds. Deploys run only when Alex starts th
 ## Source layers
 - ESPN (major sports), Sidearm text pages (`src/sidearm.js`), TFRRS (cross country places, `src/tfrrs.js`).
 - WMT schools (BYU, UCF, Cincinnati, Arizona State): `/website-api` JSON on the school's own site (`src/wmt.js`), every sport and season, no ESPN. A per-sport season list (`|wmt|cat-<slug>|cat`) yields the season pages at run time (`wmtEventSources`).
+- Sidearm API (`src/sidearmApi.js`): `/api/v2/Sports` (current schedule ids) and `/api/v2/Schedule/<id>` carry meet placings (`result.postscoreInfo`, cumulative per round: the last round is the final finish; checked against TCU's Carmel Cup 2025 recap, 8th of 8). Last season's id comes from that season's regular schedule page Nuxt payload (`scheduleIdFromPage`).
+- Big 12 standings (`src/big12.js`): official conference/overall records per sport and season; `reconcile()` in assemble.js.
 - ESPN's college softball/baseball schedules can be incomplete (Texas Tech softball 2026: ESPN 61 games, official 61-10). Big 12 standings (big12sports.com/standings.aspx?path=<sport>) are the official check.
 
 ## Rules

@@ -170,7 +170,7 @@ const dayGap = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 86_400_000
 // Other templates (Baylor, BYU) have no such headings; then this returns no events.
 const MONTHS_LONG = { january: 1, february: 2, march: 3, april: 4, may: 5, june: 6, july: 7, august: 8, september: 9, october: 10, november: 11, december: 12 };
 
-function normPlace(s) {
+export function normPlace(s) {
   s = String(s || "").trim();
   const m = s.match(/^(T-?)?(\d{1,2})(st|nd|rd|th)\b(?:\s*(?:place)?\s*(?:\/|of)\s*(\d{1,3}))?/i);
   return m ? `${m[1] ? "T-" : ""}${m[2]}${m[3].toLowerCase()}${m[4] ? " of " + m[4] : ""}` : null;

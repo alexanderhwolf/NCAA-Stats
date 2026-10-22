@@ -189,6 +189,16 @@ export function assembleSchool(school, rows, today) {
       // Meet placings the text page leaves out come from the regular schedule page.
       const reg = sp.kind === "meet" && !isWmt ? data(`${school.id}|reg|${sp.slug}|cur`) : null;
       if (cur && reg?.events?.length) cur = { ...cur, events: mergePlacings(cur.events, reg.events, sp.g) };
+      // Placings from the Sidearm API (src/sidearmApi.js), matched to the season by its title.
+      if (!isWmt && sp.kind === "meet") {
+        for (const k of ["cur", "prev"]) {
+          const api = data(`${school.id}|sapi|${sp.slug}|${k}`);
+          if (!api?.events?.length) continue;
+          const lbl = api.label || "";
+          if (cur && lbl.includes(sidearmSeason(fam, Y))) cur = { ...cur, events: mergePlacings(cur.events, api.events, sp.g) };
+          else if (prev && lbl.includes(sidearmSeason(fam, Y - 1))) prev = { ...prev, events: mergePlacings(prev.events, api.events, sp.g) };
+        }
+      }
     }
     const label = sp.g === "Coed" ? sp.name : `${sp.g}'s ${sp.name.toLowerCase()}`;
     // Shown as schools write it ("2025-26", "2026"), whichever source the numbers came from.
