@@ -1,7 +1,7 @@
 // big12-board Worker: a cron that refreshes records into D1, a small JSON API,
 // and the static page (public/) served as Workers static assets.
 
-import { runBatch, rebuildDocs, rebuildSeasons, allSources, UA } from "./refresh.js";
+import { runBatch, rebuildDocs, rebuildSeasons, allSources, UA, fetchKeepingCookies } from "./refresh.js";
 import { SCHOOLS, membersIn, HISTORY_YEARS } from "./schools.js";
 import { localDate, startYear } from "./season.js";
 
@@ -28,7 +28,7 @@ async function probe(request, env) {
   const t0 = Date.now();
   let status = 0, ctype = null, body = "", error = null;
   try {
-    const res = await fetch(target, { headers: { "user-agent": UA }, signal: AbortSignal.timeout(15_000) });
+    const res = await (q.get("cookies") ? fetchKeepingCookies : fetch)(target.href, { headers: { "user-agent": UA }, signal: AbortSignal.timeout(15_000) });
     status = res.status; ctype = res.headers.get("content-type");
     body = await res.text();
   } catch (e) { error = String(e?.message || e); }

@@ -13,6 +13,24 @@ import { BY_ID, espnTeamId, membersIn, HISTORY_YEARS, teamMatches } from "./scho
 import { localDate, startYear } from "./season.js";
 import { assembleSchool, assembleSeason } from "./assemble.js";
 
+// Some sites (big12sports.com) set a cookie and redirect back to the same URL; a fetch that
+// follows redirects without keeping cookies loops until "Too many redirects". This follows
+// redirects by hand and carries the cookies along, up to 6 hops.
+export async function fetchKeepingCookies(url, init = {}) {
+  const jar = new Map();
+  let u = url;
+  for (let hop = 0; hop < 6; hop++) {
+    const headers = { ...(init.headers || {}) };
+    if (jar.size) headers.cookie = [...jar].map(([k, v]) => `${k}=${v}`).join("; ");
+    const res = await fetch(u, { ...init, headers, redirect: "manual" });
+    const set = typeof res.headers.getSetCookie === "function" ? res.headers.getSetCookie() : (res.headers.get("set-cookie") ? [res.headers.get("set-cookie")] : []);
+    for (const c of set) { const m = String(c).match(/^\s*([^=;\s]+)=([^;]*)/); if (m) jar.set(m[1], m[2]); }
+    if (res.status < 300 || res.status >= 400 || !res.headers.get("location")) return res;
+    u = new URL(res.headers.get("location"), u).href;
+  }
+  throw new Error("Too many redirects (with cookies kept)");
+}
+
 export const UA = "Mozilla/5.0 (compatible; Big12RecordsBoard/1.0; +https://github.com/alexanderhwolf/ncaa-stats)";
 
 // caps: how many pages of each layer one run may take (ESPN_PER_RUN / SITE_PER_RUN).
@@ -101,7 +119,7 @@ export async function runBatch(env, now = Date.now()) {
   for (const s of pick) {
     let status = 0, err = null, data = null;
     try {
-      const res = await fetch(s.url, { headers: { "user-agent": UA, accept: s.layer === "espn" ? "application/json" : "text/html" }, signal: AbortSignal.timeout(15_000), cf: { cacheTtl: 0 } });
+      const res = await (s.conf ? fetchKeepingCookies : fetch)(s.url, { headers: { "user-agent": UA, accept: s.layer === "espn" ? "application/json" : "text/html" }, signal: AbortSignal.timeout(15_000), cf: { cacheTtl: 0 } });
       status = res.status;
       if (res.ok) {
         const parsed = parse(s, await res.text());
