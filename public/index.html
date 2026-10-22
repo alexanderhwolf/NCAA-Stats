@@ -127,7 +127,7 @@ h2.sec { font-family: var(--display); font-weight: 700; font-size: clamp(24px, 4
 .meta { font-size: 13.5px; color: var(--muted); display: grid; gap: 2px; }
 .meta b { color: var(--fg); font-weight: 600; }
 ol.fin { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-ol.fin li { display: grid; grid-template-columns: 64px 1fr auto; gap: 8px; font-size: 13.5px; align-items: baseline; }
+ol.fin li { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; gap: 8px; font-size: 13.5px; align-items: baseline; }
 .place { font-family: var(--display); font-weight: 700; font-size: 17px; font-variant-numeric: tabular-nums; }
 .place.podium { color: var(--win); }
 .fin .e { min-width: 0; overflow-wrap: anywhere; }
@@ -147,7 +147,9 @@ ol.fin li { display: grid; grid-template-columns: 64px 1fr auto; gap: 8px; font-
 .bd-n { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
 .disc { margin: 8px 0 0; font-size: 13.5px; color: var(--muted); max-width: 80ch; }
 .pend { font-size: 13px; color: var(--muted); border-left: 2px solid var(--line); padding-left: 8px; }
-.place.na { color: var(--muted); }
+.place.na { color: var(--muted); font-family: var(--body); font-weight: 400; font-size: 12px; }
+.pg, .pof { font-family: var(--body); font-weight: 600; font-size: 11px; color: var(--muted); letter-spacing: 0; }
+
 /* Filters: sticky so they stay in reach while scrolling the tiles */
 .filters { position: sticky; top: 0; z-index: 2; background: var(--bg); padding: 10px 0; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
 .filters .seg { margin: 0; }
@@ -321,8 +323,8 @@ function meetTile(s) {
   // Most recent finish first.
   const fin = (s.finishes || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || ""));
   const list = fin.length ? `<ol class="fin">${fin.map(f => {
-    const top = /^(T-)?(1st|2nd|3rd)\b/i.test(f.place || "");
-    return `<li><span class="place${f.place ? (top ? " podium" : "") : " na"}">${esc(f.place || "—")}</span><span class="e">${esc(f.event)}</span><span class="dt">${esc(fmtD(f.date))}</span></li>`;
+    const top = B12.isPodium(f.place);
+    return `<li><span class="place${f.place ? (top ? " podium" : "") : " na"}">${B12.placeHtml(f.place, esc, "no team place")}</span><span class="e">${esc(f.event)}</span><span class="dt">${esc(fmtD(f.date))}</span></li>`;
   }).join("")}</ol>` : `<div class="rec none">${off ? "No W–L (meet sport)" : "No posted finishes yet"}</div>`;
   const meta = [];
   if (s.summary) meta.push(`<div>${esc(s.summary)}</div>`);

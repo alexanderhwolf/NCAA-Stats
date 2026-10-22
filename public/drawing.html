@@ -155,9 +155,10 @@ ul.call .ld { width: 16px; border-top: 1px solid var(--red); flex: none; }
 .line { margin: 0; font-size: 13px; line-height: 1.4; }
 .line b { letter-spacing: .06em; text-transform: uppercase; font-size: 11px; margin-right: 6px; }
 ol.fin { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--hair-2); }
-ol.fin li { display: grid; grid-template-columns: 62px minmax(0,1fr) auto; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--hair-2); font-size: 13px; align-items: baseline; }
+ol.fin li { display: grid; grid-template-columns: 100px minmax(0,1fr) auto; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--hair-2); font-size: 13px; align-items: baseline; }
 .fin .pl { font-family: var(--tight); font-weight: 500; font-size: 16px; }
 .fin .pl.top { color: var(--red); }
+.pg, .pof { font-family: var(--mono); font-weight: 600; font-size: 11px; color: var(--muted); letter-spacing: 0; }
 .fin .pl.na { font-family: var(--mono); font-size: 11px; color: var(--muted); font-weight: 400; }
 .fin .dt { font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; }
 .note { margin: 0; font-size: 12px; color: var(--muted); border-top: 1px dashed var(--hair); padding-top: 6px; }
@@ -363,8 +364,8 @@ function card(s) {
     // Most recent finish first.
     const fin = (s.finishes || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || ""));
     const list = fin.length ? `<ol class="fin">${fin.map(f => {
-      const top = /^(T-)?(1st|2nd|3rd)\b/i.test(f.place || "");
-      return `<li><span class="pl${f.place ? (top ? " top" : "") : " na"}">${esc(f.place || "no place")}</span><span>${esc(f.event)}</span><span class="dt">${esc(fmtD(f.date))}</span></li>`;
+      const top = B12.isPodium(f.place);
+      return `<li><span class="pl${f.place ? (top ? " top" : "") : " na"}">${B12.placeHtml(f.place, esc, "no team place")}</span><span>${esc(f.event)}</span><span class="dt">${esc(fmtD(f.date))}</span></li>`;
     }).join("")}</ol>` : `<p class="rec none">${off ? "No W–L · meet sport" : "No posted finishes yet"}</p>`;
     return `<article class="card${off ? " off" : ""}">${head}${list}${next}${note}</article>`;
   }

@@ -2,7 +2,8 @@
 // Small batches on a frequent cron keep each run well inside the Workers CPU limit
 // and spread requests across school sites instead of bursting them.
 
-import { sourcesFor } from "./sources.js";
+import { sourcesFor, tfrrsMeetSources } from "./sources.js";
+import { parseTeamPage, parseMeetPage } from "./tfrrs.js";
 import { parseEspnSchedule } from "./espn.js";
 import { parseSidearm, parseRegular } from "./sidearm.js";
 import { BY_ID, espnTeamId, membersIn, HISTORY_YEARS, teamMatches } from "./schools.js";
@@ -60,12 +61,18 @@ const CONF = {};
 export function parse(s, body) {
   if (s.layer === "espn") return parseEspnSchedule(JSON.parse(body), s.teamId || espnTeamId(BY_ID[s.school], s.ref), CONF[`${s.ref}|${s.Y}`] ??= confIds(s.ref, s.Y));
   if (s.reg) return parseRegular(body);
+  if (s.tfrrs === "team") return parseTeamPage(body);
+  if (s.tfrrs === "meet") return parseMeetPage(body);
   return parseSidearm(body, { Y: s.Y, isFallBallSport: s.fam === "spring" });
 }
 
 export async function runBatch(env, now = Date.now()) {
   const today = localDate(new Date(now));
   const sources = sourcesFor(today);
+  // TFRRS meet pages come from the team pages already stored.
+  const { results: tfTeams } = await env.DB.prepare("SELECT school, data FROM pages WHERE key LIKE '%|tfrrs|team-%' AND data IS NOT NULL").all();
+  const teamData = tfTeams.map(r => { try { return { school: r.school, ...JSON.parse(r.data) }; } catch { return { school: r.school, meets: [] }; } });
+  sources.push(...tfrrsMeetSources(teamData, today));
   const { results: rows } = await env.DB.prepare("SELECT key, url, last_attempt, fail_count, last_status FROM pages").all();
   const pick = pickDue(sources, rows, now, { espn: Number(env.ESPN_PER_RUN || 1), site: Number(env.SITE_PER_RUN || 2) });
   for (const s of pick) {
@@ -76,7 +83,7 @@ export async function runBatch(env, now = Date.now()) {
       if (res.ok) {
         const parsed = parse(s, await res.text());
         // A regular page without event headings (other templates) is a valid, empty answer.
-        if (s.layer === "site" && !s.reg && !parsed.events.length && !parsed.record.overall) err = "no schedule table found";
+        if (s.layer === "site" && !s.reg && !s.tfrrs && !parsed.events.length && !parsed.record.overall) err = "no schedule table found";
         // A wrong team id returns some other school's schedule; never store it.
         else if (s.layer === "espn" && !teamMatches(BY_ID[s.school], parsed.teamName)) err = `wrong team (${parsed.teamName})`;
         else data = JSON.stringify(parsed);
@@ -100,7 +107,9 @@ export async function runBatch(env, now = Date.now()) {
     ).bind(s.key, s.school, s.layer, s.ref, s.phase, s.url, s.ttl, now, data ? now : null, status, err, data ? 0 : 1, data).run();
   }
   const Y = startYear(today);
-  const touched = [...new Set(pick.filter(s => s.phase !== "hist").map(s => s.school))];
+  // A TFRRS meet page touches every school whose team page lists that meet.
+  const meetSchools = id => teamData.filter(t => (t.meets || []).some(m => m.id === id)).map(t => t.school);
+  const touched = [...new Set(pick.filter(s => s.phase !== "hist").flatMap(s => s.tfrrs === "meet" ? meetSchools(s.ref) : [s.school]))];
   await rebuildDocs(env, touched.filter(id => membersIn(Y).some(m => m.id === id)), today, now);
   // Past-season documents: last season (prev pages) and older ones (hist pages).
   const seasons = [...new Set(pick.filter(s => s.phase !== "cur").map(s => `${s.school}|${s.phase === "prev" ? Y - 1 : s.Y}`))];
@@ -133,6 +142,17 @@ export async function rebuildDocs(env, schoolIds, today = localDate(), now = Dat
   const stmts = [];
   for (const id of schoolIds) {
     const { results } = await env.DB.prepare("SELECT key, url, last_ok, last_error, fail_count, data FROM pages WHERE school = ?1 AND phase IN ('cur', 'prev')").bind(id).all();
+    // Plus the TFRRS meet pages this school's team pages list.
+    const ids = new Set();
+    for (const r of results) if (r.key.includes("|tfrrs|team-") && r.data) { try { for (const m of JSON.parse(r.data).meets || []) if (m.xc) ids.add(m.id); } catch {} }
+    if (ids.size) {
+      const keys = [...ids].map(i => `_tfrrs|meet|${i}`);
+      for (let i = 0; i < keys.length; i += 50) {
+        const part = keys.slice(i, i + 50);
+        const { results: mr } = await env.DB.prepare(`SELECT key, url, last_ok, data FROM pages WHERE key IN (${part.map((_, j) => "?" + (j + 1)).join(",")})`).bind(...part).all();
+        results.push(...mr);
+      }
+    }
     const doc = assembleSchool(BY_ID[id], results, today);
     stmts.push(env.DB.prepare("INSERT OR REPLACE INTO docs (school, json, updated_at) VALUES (?1, ?2, ?3)").bind(id, JSON.stringify(doc), now));
   }

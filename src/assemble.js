@@ -4,6 +4,7 @@
 import { membersIn, teamMatches } from "./schools.js";
 import { family, sidearmSeason, startYear, addDays } from "./season.js";
 import { mergePlacings } from "./sidearm.js";
+import { placeAt } from "./tfrrs.js";
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const md = iso => (iso ? `${MON[+iso.slice(5, 7) - 1]} ${+iso.slice(8, 10)}` : "");
@@ -24,6 +25,40 @@ function dedupe(events) {
 // Only a label that names a season can say a page is for the wrong one. Pages stored before
 // the parser fix carry the site name ("Iowa State University Athletics") as label.
 const namesSeason = l => !!l && /\b(19|20)\d\d\b/.test(l);
+
+// Cross country team places from TFRRS for the fall season starting in Y, merged into the
+// school's own schedule events by date (or added when the schedule doesn't list the meet).
+// A meet whose results are up but where the team didn't score is marked noTeamScore, so it
+// isn't reported as "result not posted yet".
+const isXC = sp => /Cross Country/.test(sp.name);
+function tfrrsMerge(school, sp, data, events, Y) {
+  if (!school.tfrrs || !isXC(sp)) return events;
+  const gs = (sp.g === "Coed" ? ["Men", "Women"] : [sp.g]).filter(g => school.tfrrs[g]);
+  if (!gs.length) return events;
+  const lo = `${Y}-07-01`, hi = `${Y + 1}-01-31`;
+  const byMeet = new Map();
+  for (const g of gs) {
+    const team = data(`${school.id}|tfrrs|team-${g}|cur`);
+    for (const m of team?.meets || []) {
+      if (!m.xc || m.date < lo || m.date > hi) continue;
+      const meet = data(`_tfrrs|meet|${m.id}`);
+      if (!meet) continue; // not fetched yet: leave the schedule as it is
+      const x = byMeet.get(m.id) || { date: m.date, end: m.end, name: m.name, places: {} };
+      x.places[g] = placeAt(meet, school.tfrrs[g], g);
+      byMeet.set(m.id, x);
+    }
+  }
+  const out = events.map(e => ({ ...e }));
+  for (const m of byMeet.values()) {
+    const parts = gs.filter(g => m.places[g]).map(g => (gs.length > 1 ? `${g} ` : "") + m.places[g]);
+    const place = parts.length ? parts.join(" · ") : null;
+    const last = m.end || m.date;
+    const e = out.find(x => !x.exhibition && x.date >= addDays(m.date, -1) && x.date <= addDays(last, 1));
+    if (e) { if (!e.place) { e.place = place; e.noTeamScore = !place; } }
+    else out.push({ date: m.date, end: m.end, time: null, at: null, opp: m.name, location: null, tournament: null, result: null, place, raw: null, exhibition: false, conf: null, g: null, noTeamScore: !place });
+  }
+  return out.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+}
 
 const letter = r => (r && /^[WLT]\b/.test(r) ? r[0] : null);
 
@@ -46,7 +81,7 @@ export function summarize(sport, events, recordLine, today) {
     if (recordLine.conf) conf = recordLine.conf;
     if (recordLine.streak) streak = recordLine.streak;
   }
-  const finishes = events.filter(e => e.place).map(e => ({ date: e.end || e.date, event: e.opp || e.tournament || "Event", place: e.place }));
+  const finishes = events.filter(e => e.place || e.noTeamScore).map(e => ({ date: e.end || e.date, event: e.opp || e.tournament || "Event", place: e.place || null }));
   const upcoming = events.filter(e => !e.result && !e.place && (e.end || e.date) >= today && !e.canceled);
   const next = upcoming.find(e => !e.exhibition) || upcoming[0] || null;
   const lastGame = counted[counted.length - 1] || null;
@@ -58,7 +93,7 @@ export function summarize(sport, events, recordLine, today) {
   // Competed this season (an event date has passed), whether or not a result was posted.
   const played = events.some(e => !e.exhibition && !e.canceled && (e.end || e.date) < today);
   // Past events with nothing posted: say so on the tile ("result not posted yet").
-  const pending = events.filter(e => !e.exhibition && !e.canceled && !e.result && !e.place && (e.end || e.date) < today && (e.end || e.date) >= addDays(today, -21))
+  const pending = events.filter(e => !e.exhibition && !e.canceled && !e.result && !e.place && !e.noTeamScore && (e.end || e.date) < today && (e.end || e.date) >= addDays(today, -21))
     .slice(-2).map(e => `${e.opp || e.tournament || "Event"} (${md(e.end || e.date)}): result not posted yet`);
   const lastFinish = events.filter(e => e.place).at(-1) || null;
   return { w, l, t, conf, streak, finishes, next, lastGame, lastFinish, hasResults, upcoming, played, pending };
@@ -140,7 +175,17 @@ export function assembleSchool(school, rows, today) {
       cur = { ...cur, record: null, events: cur.events.filter(e => (e.end || e.date) >= today).map(e => ({ ...e, exhibition: true })) };
     }
 
-    if (sp.layer === "site" && school.platform !== "sidearm") {
+    // Cross country with TFRRS: merge team places; where the school site isn't readable,
+    // TFRRS alone is the schedule.
+    const tf = school.tfrrs && isXC(sp);
+    if (tf) {
+      if (school.platform !== "sidearm") { cur = { events: [], record: null }; prev = { events: [], record: null }; }
+      cur = cur && { ...cur, events: tfrrsMerge(school, sp, data, cur.events, Y) };
+      prev = prev && { ...prev, events: tfrrsMerge(school, sp, data, prev.events, Y - 1) };
+      if (cur && !cur.events.length && !cur.record?.overall && school.platform !== "sidearm") cur = null;
+      if (prev && !prev.events.length && school.platform !== "sidearm") prev = null;
+    }
+    if (sp.layer === "site" && school.platform !== "sidearm" && !tf) {
       sports.push({ ...shape(sp, { finishes: [] }, "off", null, null), w: null, l: null, notes: "This school's site isn't supported yet." });
       continue;
     }

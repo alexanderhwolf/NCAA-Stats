@@ -116,5 +116,17 @@ window.B12 = (() => {
     <p><b>Common</b> is the same calculation using only the sports every school has a record in right now. If one school doesn't play a sport, or its record isn't available yet, that sport drops out for everyone. It's the equal comparison, and it widens as more seasons start.</p>
     <p>Meet sports (golf, cross country, track, swimming invitationals) have no win–loss record and aren't included. Tap ⓘ on a school to see exactly what counted.</p>`;
 
-  return { CORE, dept, common, breakdown, disclaimer, HOW, fmtPct, rec, label };
+  // A meet place as HTML: "Women 22nd of 31 · Men 3rd of 38" (coed tiles, from TFRRS) shows
+  // one line per team, the field size small. empty: the text for no place.
+  function placeHtml(p, esc, empty) {
+    if (!p) return esc(empty);
+    return String(p).split(" · ").map(part => {
+      const m = part.match(/^(?:(Men|Women) )?(T-)?(\d+(?:st|nd|rd|th))(?: of (\d+))?$/);
+      if (!m) return esc(part);
+      return `${m[1] ? `<small class="pg">${m[1] === "Men" ? "M" : "W"}</small> ` : ""}${m[2] || ""}${m[3]}${m[4] ? `<small class="pof"> of ${m[4]}</small>` : ""}`;
+    }).join("<br>");
+  }
+  const isPodium = p => /(?:^|\s)(T-)?(1st|2nd|3rd)\b/.test(p || "");
+
+  return { CORE, dept, common, breakdown, disclaimer, HOW, fmtPct, rec, label, placeHtml, isPodium };
 })();

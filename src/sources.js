@@ -3,7 +3,7 @@
 
 import { SCHOOLS, espnTeamId, memberIn, HISTORY_YEARS } from "./schools.js";
 import { espnUrl, isSoccer } from "./espn.js";
-import { family, startYear, sidearmSeason, espnSeason } from "./season.js";
+import { family, startYear, sidearmSeason, espnSeason, addDays } from "./season.js";
 
 export const TTL_CUR_MIN = 180;          // current season: every 3 hours
 export const TTL_PREV_MIN = 7 * 24 * 60; // finished season: weekly is plenty
@@ -48,8 +48,32 @@ export function sourcesFor(today) {
       }
     }
   }
+  // TFRRS team pages (cross country): one per school and gender. Meet pages are added at run
+  // time from what these list (tfrrsMeetSources).
+  for (const s of SCHOOLS) {
+    if (!s.tfrrs || !memberIn(s, Y)) continue;
+    for (const [g, slug] of Object.entries(s.tfrrs)) {
+      if (!slug) continue;
+      out.push({ key: `${s.id}|tfrrs|team-${g}|cur`, school: s.id, layer: "site", ref: slug, phase: "cur", ttl: TTL_CUR_MIN, tfrrs: "team",
+        url: `https://www.tfrrs.org/teams/xc/${slug}.html`, Y, fam: "fall" });
+    }
+  }
   out.push(...historySources(Y));
   return out;
+}
+
+// Cross country meet pages listed on the stored TFRRS team pages, this season and last.
+// Shared by every school at the meet (school "_tfrrs"). Recent meets refresh every 3 hours
+// while results settle; older ones monthly.
+export function tfrrsMeetSources(teamPages, today) {
+  const Y = startYear(today), seen = new Map();
+  for (const tp of teamPages) for (const m of tp?.meets || []) {
+    if (!m.xc || m.date < `${Y - 1}-07-01` || m.date > today) continue;
+    if (seen.has(m.id)) continue;
+    const recent = (m.end || m.date) >= addDays(today, -10);
+    seen.set(m.id, { key: `_tfrrs|meet|${m.id}`, school: "_tfrrs", layer: "site", ref: m.id, phase: "cur", ttl: recent ? TTL_CUR_MIN : 30 * 24 * 60, tfrrs: "meet", url: m.url, Y, fam: "fall" });
+  }
+  return [...seen.values()];
 }
 
 // Seasons before last, back HISTORY_YEARS, for schools that were members that season.

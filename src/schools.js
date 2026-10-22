@@ -2741,6 +2741,20 @@ export const SCHOOLS = [
 
 export const BY_ID = Object.fromEntries(SCHOOLS.map(s => [s.id, s]));
 
+// TFRRS team slugs (cross country), as they appear on the 2025 Big 12 Cross Country
+// Championships results page (tfrrs.org/results/xc/27247), checked Oct 21, 2026. Only the
+// genders each school runs: UCF, Utah and West Virginia have women's teams only.
+const TFRRS = {
+  arizona: ["AZ_college_m_Arizona", "AZ_college_f_Arizona"], "arizona-state": ["AZ_college_m_Arizona_State", "AZ_college_f_Arizona_State"],
+  baylor: ["TX_college_m_Baylor", "TX_college_f_Baylor"], byu: ["UT_college_m_BYU", "UT_college_f_BYU"], ucf: [null, "FL_college_f_Central_Florida"],
+  cincinnati: ["OH_college_m_Cincinnati", "OH_college_f_Cincinnati"], colorado: ["CO_college_m_Colorado", "CO_college_f_Colorado"],
+  houston: ["TX_college_m_Houston", "TX_college_f_Houston"], "iowa-state": ["IA_college_m_Iowa_State", "IA_college_f_Iowa_State"],
+  kansas: ["KS_college_m_Kansas", "KS_college_f_Kansas"], "kansas-state": ["KS_college_m_Kansas_State", "KS_college_f_Kansas_State"],
+  "oklahoma-state": ["OK_college_m_Oklahoma_State", "OK_college_f_Oklahoma_State"], tcu: ["TX_college_m_TCU", "TX_college_f_TCU"],
+  "texas-tech": ["TX_college_m_Texas_Tech", "TX_college_f_Texas_Tech"], utah: [null, "UT_college_f_Utah"], "west-virginia": [null, "WV_college_f_West_Virginia"],
+};
+for (const s of SCHOOLS) if (TFRRS[s.id]) s.tfrrs = { Men: TFRRS[s.id][0], Women: TFRRS[s.id][1] };
+
 // Tennis and beach volleyball are dual-match sports with a team W-L record (spring), not meets.
 for (const s of SCHOOLS) for (const sp of s.sports) if (sp.name === "Tennis" || sp.name === "Beach Volleyball") sp.kind = "h2h";
 
