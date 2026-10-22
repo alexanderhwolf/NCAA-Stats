@@ -146,6 +146,8 @@ ol.fin li { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; gap:
 .bd-h { margin: 6px 0 0; font-family: var(--display); font-weight: 600; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; }
 .bd-n { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
 .disc { margin: 8px 0 0; font-size: 13.5px; color: var(--muted); max-width: 80ch; }
+.chip.ok { color: var(--win); }
+.flag { font-size: 13px; color: var(--fg); background: color-mix(in srgb, var(--tie) 14%, var(--surface)); border-left: 3px solid var(--tie); padding: 4px 8px; border-radius: 2px; }
 .pend { font-size: 13px; color: var(--muted); border-left: 2px solid var(--line); padding-left: 8px; }
 .place.na { color: var(--muted); font-family: var(--body); font-weight: 400; font-size: 12px; }
 .pg, .pof { font-family: var(--body); font-weight: 600; font-size: 11px; color: var(--muted); letter-spacing: 0; }
@@ -307,9 +309,15 @@ function recordTile(s) {
   if (s.conf) chips.push(`<span class="chip">${esc(s.confName || "Conf")} ${esc(dash(s.conf))}</span>`);
   if (s.streak && !off) chips.push(`<span class="chip ${s.streak[0] === "W" ? "w" : s.streak[0] === "L" ? "l" : ""}">Streak ${esc(s.streak)}</span>`);
   if (total) chips.push(`<span class="chip">${pctStr(pct(s.w, s.l, t))} pct</span>`);
+  // Checked against the Big 12's official standings (when the conference publishes them).
+  if (s.check?.agrees) chips.push(`<span class="chip ok" title="Matches the Big 12's official standings">✓ Big 12</span>`);
   const meta = [];
   if (s.last && !off) meta.push(`<div><b>Last:</b> ${esc(dash(s.last.result || ""))} ${esc(oppLine(s.last))}, ${esc(fmtD(s.last.date))}</div>`);
   if (s.summary) meta.push(`<div>${esc(s.summary)}</div>`);
+  if (s.check && !s.check.agrees && s.check.ours) {
+    const shown = s.recordSource ? "showing the Big 12's" : "showing the game-by-game count, which is more recent";
+    meta.push(`<div class="flag">Sources disagree: Big 12 standings ${esc(dash(s.check.record))}, game-by-game ${esc(dash(s.check.ours))} (${shown}).</div>`);
+  }
   for (const p of s.pending || []) meta.push(`<div class="pend">${esc(p)}</div>`);
   if (s.next) meta.push(`<div><b>${off ? "Opens" : "Next"}:</b> ${esc(oppLine(s.next))}, ${esc(fmtD(s.next.date))}</div>`);
   return `<article class="tile${off ? " off" : ""}">

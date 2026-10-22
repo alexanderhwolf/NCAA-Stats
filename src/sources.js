@@ -4,6 +4,7 @@
 import { SCHOOLS, espnTeamId, memberIn, HISTORY_YEARS } from "./schools.js";
 import { espnUrl, isSoccer } from "./espn.js";
 import { wmtSchedulesUrl, wmtEventsUrl, scheduleFor } from "./wmt.js";
+import { STANDINGS, B12_HOST, standingsSeasonMatches } from "./big12.js";
 import { family, startYear, sidearmSeason, espnSeason, addDays } from "./season.js";
 
 export const TTL_CUR_MIN = 180;          // current season: every 3 hours
@@ -72,7 +73,30 @@ export function sourcesFor(today) {
         url: `https://www.tfrrs.org/teams/xc/${slug}.html`, Y, fam: "fall" });
     }
   }
+  // Big 12 standings: one season list per sport; the season pages come from it at run time.
+  for (const st of STANDINGS) {
+    out.push({ key: `conf|b12|${st.path}|cat`, school: "conf", layer: "site", ref: st.path, phase: "cat", ttl: TTL_CAT_MIN, conf: "catalog",
+      url: `https://${B12_HOST}${st.url}`, Y, fam: family(st) });
+  }
   out.push(...historySources(Y));
+  return out;
+}
+
+// Big 12 standings pages for each season back HISTORY_YEARS, from the stored season lists.
+// This season and last refresh with the games; older ones monthly.
+export function confStandingsSources(catalogs, today) {
+  const Y = startYear(today), out = [];
+  for (const c of catalogs) {
+    const st = STANDINGS.find(x => x.path === c.path);
+    if (!st) continue;
+    const fam = family(st);
+    for (let y = Y - HISTORY_YEARS; y <= Y; y++) {
+      const season = (c.seasons || []).find(x => standingsSeasonMatches(x.title, fam, y));
+      if (!season) continue;
+      out.push({ key: `conf|b12|${st.path}|y${y}`, school: "conf", layer: "site", ref: st.path, phase: y >= Y - 1 ? "cur" : "hist", conf: "season",
+        ttl: y === Y ? TTL_CUR_MIN : y === Y - 1 ? 24 * 60 : 30 * 24 * 60, url: `https://${B12_HOST}/standings.aspx?standings=${season.id}`, Y: y, fam });
+    }
+  }
   return out;
 }
 

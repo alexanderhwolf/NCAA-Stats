@@ -2,7 +2,8 @@
 // Small batches on a frequent cron keep each run well inside the Workers CPU limit
 // and spread requests across school sites instead of bursting them.
 
-import { sourcesFor, tfrrsMeetSources, wmtEventSources } from "./sources.js";
+import { sourcesFor, tfrrsMeetSources, wmtEventSources, confStandingsSources } from "./sources.js";
+import { parseStandings } from "./big12.js";
 import { parseWmtSchedules, parseWmtEvents } from "./wmt.js";
 import { parseTeamPage, parseMeetPage } from "./tfrrs.js";
 import { parseEspnSchedule } from "./espn.js";
@@ -64,6 +65,7 @@ export function parse(s, body) {
   if (s.reg) return parseRegular(body);
   if (s.tfrrs === "team") return parseTeamPage(body);
   if (s.tfrrs === "meet") return parseMeetPage(body);
+  if (s.conf) return parseStandings(body);
   if (s.wmt === "catalog") return parseWmtSchedules(JSON.parse(body));
   if (s.wmt === "events") return parseWmtEvents(JSON.parse(body), BY_ID[s.school].tz);
   return parseSidearm(body, { Y: s.Y, isFallBallSport: s.fam === "spring" });
@@ -78,6 +80,8 @@ export async function allSources(env, today) {
   sources.push(...tfrrsMeetSources(teamData, today));
   const { results: cats } = await env.DB.prepare("SELECT school, ref, data FROM pages WHERE key LIKE '%|wmt|cat-%' AND data IS NOT NULL").all();
   sources.push(...wmtEventSources(cats.map(r => { try { return { school: r.school, slug: r.ref, ...JSON.parse(r.data) }; } catch { return { school: r.school, slug: r.ref, schedules: [] }; } }), today));
+  const { results: confCats } = await env.DB.prepare("SELECT ref, data FROM pages WHERE key LIKE 'conf|b12|%|cat' AND data IS NOT NULL").all();
+  sources.push(...confStandingsSources(confCats.map(r => { try { return { path: r.ref, ...JSON.parse(r.data) }; } catch { return { path: r.ref, seasons: [] }; } }), today));
   return { sources, teamData };
 }
 
@@ -94,7 +98,8 @@ export async function runBatch(env, now = Date.now()) {
       if (res.ok) {
         const parsed = parse(s, await res.text());
         // A regular page without event headings (other templates) is a valid, empty answer.
-        if (s.layer === "site" && !s.reg && !s.tfrrs && !s.wmt && !parsed.events.length && !parsed.record.overall) err = "no schedule table found";
+        if (s.conf === "season" && !parsed.rows.length) err = "no standings table found";
+        else if (s.layer === "site" && !s.reg && !s.tfrrs && !s.wmt && !s.conf && !parsed.events.length && !parsed.record.overall) err = "no schedule table found";
         // A wrong team id returns some other school's schedule; never store it.
         else if (s.layer === "espn" && !teamMatches(BY_ID[s.school], parsed.teamName)) err = `wrong team (${parsed.teamName})`;
         else data = JSON.stringify(parsed);
@@ -120,11 +125,18 @@ export async function runBatch(env, now = Date.now()) {
   const Y = startYear(today);
   // A TFRRS meet page touches every school whose team page lists that meet.
   const meetSchools = id => teamData.filter(t => (t.meets || []).some(m => m.id === id)).map(t => t.school);
-  const touched = [...new Set(pick.filter(s => s.phase !== "hist").flatMap(s => s.tfrrs === "meet" ? meetSchools(s.ref) : [s.school]))];
+  // A Big 12 standings page touches every member that season (and the current board when
+  // it's this season or last, which off-season tiles show).
+  const confPicks = pick.filter(s => s.conf === "season");
+  const touched = [...new Set([
+    ...pick.filter(s => s.phase !== "hist" && !s.conf).flatMap(s => s.tfrrs === "meet" ? meetSchools(s.ref) : [s.school]),
+    ...confPicks.filter(s => s.Y >= startYear(today) - 1).flatMap(() => membersIn(startYear(today)).map(m => m.id)),
+  ])];
   await rebuildDocs(env, touched.filter(id => membersIn(Y).some(m => m.id === id)), today, now);
   // Past-season documents: last season (prev pages) and older ones (hist pages).
-  const seasons = [...new Set(pick.filter(s => s.phase !== "cur").map(s => `${s.school}|${s.phase === "prev" ? Y - 1 : s.Y}`))];
-  const pairs = seasons.map(k => { const [id, y] = k.split("|"); return { id, y: +y }; });
+  const seasons = [...new Set(pick.filter(s => s.phase !== "cur" && !s.conf).map(s => `${s.school}|${s.phase === "prev" ? Y - 1 : s.Y}`))];
+  const pairs = seasons.map(k => { const [id, y] = k.split("|"); return { id, y: +y }; })
+    .concat(confPicks.filter(s => s.Y < Y).flatMap(s => membersIn(s.Y).map(m => ({ id: m.id, y: s.Y }))));
   // Plus a few season documents that don't exist yet (last season's, right after deploy).
   const have = new Set((await env.DB.prepare("SELECT school || '|' || year AS k FROM hist_docs").all()).results.map(r => r.k));
   const missing = [];
@@ -142,7 +154,7 @@ export async function rebuildSeasons(env, pairs, today = localDate(), now = Date
     if (!school || y >= Y) continue;
     const like = y === Y - 1 ? `${id}|%|prev%` : `${id}|%|y${y}%`;
     // Plus WMT season lists, so a season the school has no schedule for can say so.
-    const { results } = await env.DB.prepare("SELECT key, url, last_ok, last_status, last_error, fail_count, data FROM pages WHERE key LIKE ?1 OR key LIKE ?2").bind(like, `${id}|wmt|cat-%`).all();
+    const { results } = await env.DB.prepare("SELECT key, url, last_ok, last_status, last_error, fail_count, data FROM pages WHERE key LIKE ?1 OR key LIKE ?2 OR key LIKE ?3").bind(like, `${id}|wmt|cat-%`, `conf|b12|%|y${y}`).all();
     const doc = assembleSeason(school, results, y, Y, today);
     stmts.push(env.DB.prepare("INSERT OR REPLACE INTO hist_docs (school, year, json, updated_at) VALUES (?1, ?2, ?3, ?4)").bind(id, y, JSON.stringify(doc), now));
   }
@@ -154,6 +166,10 @@ export async function rebuildDocs(env, schoolIds, today = localDate(), now = Dat
   const stmts = [];
   for (const id of schoolIds) {
     const { results } = await env.DB.prepare("SELECT key, url, last_ok, last_error, fail_count, data FROM pages WHERE school = ?1 AND phase IN ('cur', 'prev')").bind(id).all();
+    // Plus the Big 12 standings for this season and last.
+    const Yc = startYear(today);
+    const { results: cr } = await env.DB.prepare("SELECT key, url, last_ok, data FROM pages WHERE key LIKE ?1 OR key LIKE ?2").bind(`conf|b12|%|y${Yc}`, `conf|b12|%|y${Yc - 1}`).all();
+    results.push(...cr);
     // Plus the TFRRS meet pages this school's team pages list.
     const ids = new Set();
     for (const r of results) if (r.key.includes("|tfrrs|team-") && r.data) { try { for (const m of JSON.parse(r.data).meets || []) if (m.xc) ids.add(m.id); } catch {} }

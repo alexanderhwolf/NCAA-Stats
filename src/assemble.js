@@ -5,6 +5,7 @@ import { membersIn, teamMatches } from "./schools.js";
 import { family, sidearmSeason, startYear, addDays } from "./season.js";
 import { mergePlacings } from "./sidearm.js";
 import { placeAt } from "./tfrrs.js";
+import { standingsFor, recParts } from "./big12.js";
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const md = iso => (iso ? `${MON[+iso.slice(5, 7) - 1]} ${+iso.slice(8, 10)}` : "");
@@ -58,6 +59,29 @@ function tfrrsMerge(school, sp, data, events, Y) {
     else out.push({ date: m.date, end: m.end, time: null, at: null, opp: m.name, location: null, tournament: null, result: null, place, raw: null, exhibition: false, conf: null, g: null, noTeamScore: !place });
   }
   return out.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+}
+
+// The Big 12's official record for this sport and season (src/big12.js), checked against the
+// game-by-game count. A finished season shows the official record; in season, the standings
+// can trail the latest game, so the game-by-game count stands when it has more games. Either
+// way a disagreement is recorded in check, for the page to show.
+function reconcile(out, sp, school, data, y, live) {
+  const st = standingsFor(sp);
+  if (!st || sp.kind !== "h2h") return out;
+  const row = data(`conf|b12|${st.path}|y${y}`)?.rows?.find(r => r.school === school.name);
+  const off = row && recParts(row.overall);
+  if (!off) return out;
+  const str = r => `${r.w}-${r.l}${r.t ? "-" + r.t : ""}`;
+  const ours = Number.isFinite(out.w) && Number.isFinite(out.l) ? { w: out.w, l: out.l, t: out.t || 0 } : null;
+  const agrees = !!ours && str(ours) === str(off);
+  out.check = { source: "Big 12 standings", record: str(off), conf: row.conf || null, ours: ours ? str(ours) : null, agrees };
+  if (agrees) return out;
+  if (!live || !ours || off.w + off.l + off.t >= ours.w + ours.l + ours.t) {
+    Object.assign(out, { w: off.w, l: off.l, t: off.t, recordSource: "Big 12 standings" });
+    if (row.conf) out.conf = row.conf;
+    if (!ours) out.notes = "Record from the Big 12 standings; game-by-game results aren't available.";
+  }
+  return out;
 }
 
 const letter = r => (r && /^[WLT]\b/.test(r) ? r[0] : null);
@@ -226,6 +250,14 @@ export function assembleSchool(school, rows, today) {
       }
     }
   }
+  // Official Big 12 records: in-season tiles against this season's standings, off-season tiles
+  // against the season they show.
+  for (const out of sports) {
+    const sp = school.sports.find(x => x.slug === out.slug && x.name === out.name && x.g === out.g);
+    if (!sp) continue;
+    const y = out.status === "in" || out.season === sidearmSeason(family(sp), Y) ? Y : Y - 1;
+    reconcile(out, sp, school, data, y, out.status === "in");
+  }
   const okTimes = rows.map(r => r.last_ok).filter(Boolean);
   const seen = new Set();
   return {
@@ -284,7 +316,7 @@ export function assembleSeason(school, rows, y, Ycur, today) {
         : bad?.last_status === 404 ? `no schedule page for ${sideSeason} (the program may not have existed then)`
         : bad ? `source failing (${bad.last_error})` : "not fetched yet";
       unverified.push(`${label}: ${why}`);
-      sports.push({ ...shape(sp, { finishes: [] }, "final", season, url), w: null, l: null, notes: why === "not fetched yet" ? "Still collecting this season." : "Not available for this season." });
+      sports.push(reconcile({ ...shape(sp, { finishes: [] }, "final", season, url), w: null, l: null, notes: why === "not fetched yet" ? "Still collecting this season." : "Not available for this season." }, sp, school, data, y, false));
       continue;
     }
     const sm = summarize(sp, d.events, d.record, today);
@@ -292,7 +324,7 @@ export function assembleSeason(school, rows, y, Ycur, today) {
     if (sp.kind === "h2h" && !sm.hasResults) {
       Object.assign(out, { w: null, l: null, t: null, conf: null, notes: "No results posted for this season." });
     }
-    sports.push(out);
+    sports.push(reconcile(out, sp, school, data, y, false));
   }
   const okTimes = rows.map(r => r.last_ok).filter(Boolean);
   return {
