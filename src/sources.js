@@ -3,10 +3,12 @@
 
 import { SCHOOLS, espnTeamId, memberIn, HISTORY_YEARS } from "./schools.js";
 import { espnUrl, isSoccer } from "./espn.js";
+import { wmtSchedulesUrl, wmtEventsUrl, scheduleFor } from "./wmt.js";
 import { family, startYear, sidearmSeason, espnSeason, addDays } from "./season.js";
 
 export const TTL_CUR_MIN = 180;          // current season: every 3 hours
 export const TTL_PREV_MIN = 7 * 24 * 60; // finished season: weekly is plenty
+export const TTL_CAT_MIN = 7 * 24 * 60;  // a WMT sport's list of seasons: weekly
 export const TTL_HIST_MIN = 60 * 24 * 60; // seasons before last: finished, so every 60 days
 export const TTL_POST_MIN = 24 * 60;     // current postseason list: daily (TODO: every 3 h during each sport's postseason)
 
@@ -15,6 +17,18 @@ export function sourcesFor(today) {
   const out = [];
   for (const s of SCHOOLS) {
     const seenSlug = new Set();
+    // WMT schools: one season list per sport here; the season pages come from those lists
+    // at run time (wmtEventSources).
+    if (s.platform === "wmt") {
+      if (!memberIn(s, Y)) continue;
+      for (const sp of s.sports) {
+        if (seenSlug.has(sp.slug)) continue;
+        seenSlug.add(sp.slug);
+        out.push({ key: `${s.id}|wmt|cat-${sp.slug}|cat`, school: s.id, layer: "site", ref: sp.slug, phase: "cat", ttl: TTL_CAT_MIN, wmt: "catalog",
+          url: wmtSchedulesUrl(s.domain, s.wmtSports[sp.slug]), Y, fam: family(sp) });
+      }
+      continue;
+    }
     for (const sp of s.sports) {
       const fam = family(sp);
       for (const [phase, y] of [["cur", Y], ["prev", Y - 1]]) {
@@ -62,6 +76,29 @@ export function sourcesFor(today) {
   return out;
 }
 
+// WMT season pages, from the stored season lists (key school|wmt|cat-<slug>|cat): this season,
+// last season, and the seasons before last back HISTORY_YEARS, for seasons the school was a member.
+export function wmtEventSources(catalogs, today) {
+  const Y = startYear(today), out = [];
+  for (const c of catalogs) {
+    const s = SCHOOLS.find(x => x.id === c.school);
+    const sp = s?.sports.find(x => x.slug === c.slug);
+    if (!s || !sp) continue;
+    const fam = family(sp);
+    for (let y = Y - HISTORY_YEARS; y <= Y; y++) {
+      if (!memberIn(s, y)) continue;
+      const sch = scheduleFor(c.schedules, fam, y);
+      if (!sch) continue;
+      const phase = y === Y ? "cur" : y === Y - 1 ? "prev" : "hist";
+      const tag = phase === "hist" ? `y${y}` : phase;
+      out.push({ key: `${s.id}|wmt|${sp.slug}|${tag}`, school: s.id, layer: "site", ref: sp.slug, phase, wmt: "events",
+        ttl: phase === "cur" ? TTL_CUR_MIN : phase === "prev" ? TTL_PREV_MIN : TTL_HIST_MIN,
+        url: wmtEventsUrl(s.domain, sch.id), Y: y, fam });
+    }
+  }
+  return out;
+}
+
 // Cross country meet pages listed on the stored TFRRS team pages, this season and last.
 // Shared by every school at the meet (school "_tfrrs"). Recent meets refresh every 3 hours
 // while results settle; older ones monthly.
@@ -89,6 +126,7 @@ export function historySources(Y) {
       const seen = new Set();
       for (const sp of s.sports) {
         const fam = family(sp);
+        if (s.platform === "wmt") continue; // from wmtEventSources
         if (s.platform === "sidearm") {
           if (seen.has(sp.slug)) continue;
           seen.add(sp.slug);

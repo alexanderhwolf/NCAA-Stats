@@ -2,7 +2,8 @@
 // Small batches on a frequent cron keep each run well inside the Workers CPU limit
 // and spread requests across school sites instead of bursting them.
 
-import { sourcesFor, tfrrsMeetSources } from "./sources.js";
+import { sourcesFor, tfrrsMeetSources, wmtEventSources } from "./sources.js";
+import { parseWmtSchedules, parseWmtEvents } from "./wmt.js";
 import { parseTeamPage, parseMeetPage } from "./tfrrs.js";
 import { parseEspnSchedule } from "./espn.js";
 import { parseSidearm, parseRegular } from "./sidearm.js";
@@ -63,16 +64,26 @@ export function parse(s, body) {
   if (s.reg) return parseRegular(body);
   if (s.tfrrs === "team") return parseTeamPage(body);
   if (s.tfrrs === "meet") return parseMeetPage(body);
+  if (s.wmt === "catalog") return parseWmtSchedules(JSON.parse(body));
+  if (s.wmt === "events") return parseWmtEvents(JSON.parse(body), BY_ID[s.school].tz);
   return parseSidearm(body, { Y: s.Y, isFallBallSport: s.fam === "spring" });
+}
+
+// Every page the queue knows about: the fixed list plus pages discovered from stored ones
+// (TFRRS meets from team pages, WMT seasons from season lists).
+export async function allSources(env, today) {
+  const sources = sourcesFor(today);
+  const { results: tfTeams } = await env.DB.prepare("SELECT school, data FROM pages WHERE key LIKE '%|tfrrs|team-%' AND data IS NOT NULL").all();
+  const teamData = tfTeams.map(r => { try { return { school: r.school, ...JSON.parse(r.data) }; } catch { return { school: r.school, meets: [] }; } });
+  sources.push(...tfrrsMeetSources(teamData, today));
+  const { results: cats } = await env.DB.prepare("SELECT school, ref, data FROM pages WHERE key LIKE '%|wmt|cat-%' AND data IS NOT NULL").all();
+  sources.push(...wmtEventSources(cats.map(r => { try { return { school: r.school, slug: r.ref, ...JSON.parse(r.data) }; } catch { return { school: r.school, slug: r.ref, schedules: [] }; } }), today));
+  return { sources, teamData };
 }
 
 export async function runBatch(env, now = Date.now()) {
   const today = localDate(new Date(now));
-  const sources = sourcesFor(today);
-  // TFRRS meet pages come from the team pages already stored.
-  const { results: tfTeams } = await env.DB.prepare("SELECT school, data FROM pages WHERE key LIKE '%|tfrrs|team-%' AND data IS NOT NULL").all();
-  const teamData = tfTeams.map(r => { try { return { school: r.school, ...JSON.parse(r.data) }; } catch { return { school: r.school, meets: [] }; } });
-  sources.push(...tfrrsMeetSources(teamData, today));
+  const { sources, teamData } = await allSources(env, today);
   const { results: rows } = await env.DB.prepare("SELECT key, url, last_attempt, fail_count, last_status FROM pages").all();
   const pick = pickDue(sources, rows, now, { espn: Number(env.ESPN_PER_RUN || 1), site: Number(env.SITE_PER_RUN || 2) });
   for (const s of pick) {
@@ -83,7 +94,7 @@ export async function runBatch(env, now = Date.now()) {
       if (res.ok) {
         const parsed = parse(s, await res.text());
         // A regular page without event headings (other templates) is a valid, empty answer.
-        if (s.layer === "site" && !s.reg && !s.tfrrs && !parsed.events.length && !parsed.record.overall) err = "no schedule table found";
+        if (s.layer === "site" && !s.reg && !s.tfrrs && !s.wmt && !parsed.events.length && !parsed.record.overall) err = "no schedule table found";
         // A wrong team id returns some other school's schedule; never store it.
         else if (s.layer === "espn" && !teamMatches(BY_ID[s.school], parsed.teamName)) err = `wrong team (${parsed.teamName})`;
         else data = JSON.stringify(parsed);
@@ -130,7 +141,8 @@ export async function rebuildSeasons(env, pairs, today = localDate(), now = Date
     const school = BY_ID[id];
     if (!school || y >= Y) continue;
     const like = y === Y - 1 ? `${id}|%|prev%` : `${id}|%|y${y}%`;
-    const { results } = await env.DB.prepare("SELECT key, url, last_ok, last_status, last_error, fail_count, data FROM pages WHERE key LIKE ?1").bind(like).all();
+    // Plus WMT season lists, so a season the school has no schedule for can say so.
+    const { results } = await env.DB.prepare("SELECT key, url, last_ok, last_status, last_error, fail_count, data FROM pages WHERE key LIKE ?1 OR key LIKE ?2").bind(like, `${id}|wmt|cat-%`).all();
     const doc = assembleSeason(school, results, y, Y, today);
     stmts.push(env.DB.prepare("INSERT OR REPLACE INTO hist_docs (school, year, json, updated_at) VALUES (?1, ?2, ?3, ?4)").bind(id, y, JSON.stringify(doc), now));
   }

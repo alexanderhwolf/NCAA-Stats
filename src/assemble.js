@@ -140,7 +140,8 @@ export function assembleSchool(school, rows, today) {
   for (const sp of school.sports) {
     const fam = family(sp);
     let cur, prev, curUrl, prevUrl, curRows, prevRows;
-    if (sp.layer === "espn") {
+    const isWmt = school.platform === "wmt";
+    if (sp.layer === "espn" && !isWmt) {
       const k = ph => [2, 3].map(st => `${school.id}|espn|${sp.espn}|${ph}|${st}`);
       curRows = k("cur").map(x => byKey.get(x)).filter(Boolean);
       prevRows = k("prev").map(x => byKey.get(x)).filter(Boolean);
@@ -150,7 +151,8 @@ export function assembleSchool(school, rows, today) {
       cur = merge(k("cur")); prev = merge(k("prev"));
       curUrl = curRows[0]?.url; prevUrl = prevRows[0]?.url;
     } else {
-      const kc = `${school.id}|site|${sp.slug}|cur`, kp = `${school.id}|site|${sp.slug}|prev`;
+      const base = `${school.id}|${isWmt ? "wmt" : "site"}|${sp.slug}`;
+      const kc = `${base}|cur`, kp = `${base}|prev`;
       curRows = [byKey.get(kc)].filter(Boolean); prevRows = [byKey.get(kp)].filter(Boolean);
       const split = d => {
         if (!d) return null;
@@ -161,7 +163,7 @@ export function assembleSchool(school, rows, today) {
       cur = split(data(kc)); prev = split(data(kp));
       curUrl = curRows[0]?.url; prevUrl = prevRows[0]?.url;
       // Meet placings the text page leaves out come from the regular schedule page.
-      const reg = sp.kind === "meet" ? data(`${school.id}|reg|${sp.slug}|cur`) : null;
+      const reg = sp.kind === "meet" && !isWmt ? data(`${school.id}|reg|${sp.slug}|cur`) : null;
       if (cur && reg?.events?.length) cur = { ...cur, events: mergePlacings(cur.events, reg.events, sp.g) };
     }
     const label = sp.g === "Coed" ? sp.name : `${sp.g}'s ${sp.name.toLowerCase()}`;
@@ -179,13 +181,15 @@ export function assembleSchool(school, rows, today) {
     // TFRRS alone is the schedule.
     const tf = school.tfrrs && isXC(sp);
     if (tf) {
-      if (school.platform !== "sidearm") { cur = { events: [], record: null }; prev = { events: [], record: null }; }
+      const readable = school.platform === "sidearm" || school.platform === "wmt";
+      if (!readable) { cur = { events: [], record: null }; prev = { events: [], record: null }; }
+      else { cur ??= { events: [], record: null }; prev ??= { events: [], record: null }; }
       cur = cur && { ...cur, events: tfrrsMerge(school, sp, data, cur.events, Y) };
       prev = prev && { ...prev, events: tfrrsMerge(school, sp, data, prev.events, Y - 1) };
-      if (cur && !cur.events.length && !cur.record?.overall && school.platform !== "sidearm") cur = null;
-      if (prev && !prev.events.length && school.platform !== "sidearm") prev = null;
+      if (cur && !cur.events.length && !cur.record?.overall) cur = null;
+      if (prev && !prev.events.length && !prev.record?.overall) prev = null;
     }
-    if (sp.layer === "site" && school.platform !== "sidearm" && !tf) {
+    if (sp.layer === "site" && school.platform !== "sidearm" && !isWmt && !tf) {
       sports.push({ ...shape(sp, { finishes: [] }, "off", null, null), w: null, l: null, notes: "This school's site isn't supported yet." });
       continue;
     }
@@ -249,10 +253,12 @@ export function assembleSeason(school, rows, y, Ycur, today) {
     const label = sp.g === "Coed" ? sp.name : `${sp.g}'s ${sp.name.toLowerCase()}`;
     const sideSeason = sidearmSeason(fam, y);
     // Which pages hold this sport for this season.
-    const useEspn = sp.layer === "espn" && (isPrev || school.platform !== "sidearm");
+    const isWmt = school.platform === "wmt";
+    const useEspn = sp.layer === "espn" && !isWmt && (isPrev || school.platform !== "sidearm");
     let keys;
     if (useEspn) keys = [2, 3].map(st => `${school.id}|espn|${sp.espn}|${tag}|${st}`);
     else if (school.platform === "sidearm") keys = [`${school.id}|site|${sp.slug}|${tag}`];
+    else if (isWmt) keys = [`${school.id}|wmt|${sp.slug}|${tag}`];
     else {
       sports.push({ ...shape(sp, { finishes: [] }, "final", season, null), w: null, l: null, notes: "This school's site isn't supported yet." });
       continue;
@@ -263,6 +269,7 @@ export function assembleSeason(school, rows, y, Ycur, today) {
     if (ds.some(x => !x.empty)) {
       d = useEspn ? { events: dedupe(ds.flatMap(x => x.events)), record: null } : ds[0];
       if (!useEspn && shared.has(sp.slug)) d = { ...d, events: d.events.filter(e => !e.g || e.g === sp.g), record: null };
+      if (d && isWmt) d = { ...d, events: tfrrsMerge(school, sp, data, d.events, y) };
     }
     const url = got.find(x => x.row)?.row.url || null;
     // A school page asked for an old season sometimes answers with a different one.
@@ -270,6 +277,9 @@ export function assembleSeason(school, rows, y, Ycur, today) {
     if (d && !useEspn && namesSeason(d.label) && !d.label.includes(sideSeason)) { why = `the school's page didn't have ${sideSeason}`; d = null; }
     if (!d) {
       const bad = got.map(x => x.row).find(r => r && r.last_error);
+      // WMT: the season list says whether a schedule exists for this season at all.
+      const cat = isWmt ? data(`${school.id}|wmt|cat-${sp.slug}|cat`) : null;
+      if (!why && cat && !got.some(x => x.row)) why = `no ${sideSeason} schedule on the school's site (the program may not have existed then)`;
       if (!why) why = !got.some(x => x.row) ? "not fetched yet"
         : bad?.last_status === 404 ? `no schedule page for ${sideSeason} (the program may not have existed then)`
         : bad ? `source failing (${bad.last_error})` : "not fetched yet";

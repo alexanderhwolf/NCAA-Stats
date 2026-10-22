@@ -33,9 +33,11 @@ test("current sources leave out former members; history covers members only", ()
   const t = h.find(s => s.key === "tcu|site|womens-soccer|y2019");
   assert.equal(t.url, "https://gofrogs.com/sports/womens-soccer/schedule/text/2019");
   assert.equal(h.find(s => s.key === "tcu|site|mens-basketball|y2019").url, "https://gofrogs.com/sports/mens-basketball/schedule/text/2019-20");
-  // Not Sidearm: ESPN only, and only from when they joined.
-  assert.ok(h.some(s => s.key.startsWith("byu|espn|football|y2023")));
-  assert.ok(!h.some(s => s.school === "byu" && s.layer === "site"));
+  // WMT schools (BYU, UCF, Cincinnati, Arizona State): their seasons come from each sport's
+  // season list at run time, not from this fixed list, and never from ESPN.
+  assert.ok(!h.some(s => s.school === "byu"));
+  assert.ok(sourcesFor(today).some(s => s.key === "byu|wmt|cat-womens-volleyball|cat"));
+  assert.ok(!sourcesFor(today).some(s => s.school === "byu" && s.layer === "espn"));
 });
 
 test("backfill only gets what current and last season leave, newest season first", () => {

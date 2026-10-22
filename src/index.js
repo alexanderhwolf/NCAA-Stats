@@ -1,10 +1,9 @@
 // big12-board Worker: a cron that refreshes records into D1, a small JSON API,
 // and the static page (public/) served as Workers static assets.
 
-import { runBatch, rebuildDocs, rebuildSeasons, UA } from "./refresh.js";
+import { runBatch, rebuildDocs, rebuildSeasons, allSources, UA } from "./refresh.js";
 import { SCHOOLS, membersIn, HISTORY_YEARS } from "./schools.js";
 import { localDate, startYear } from "./season.js";
-import { sourcesFor } from "./sources.js";
 
 const json = (body, init = {}) => new Response(JSON.stringify(body), {
   ...init,
@@ -47,7 +46,7 @@ async function season(env, y) {
   const { results } = await env.DB.prepare("SELECT school, json FROM hist_docs WHERE year = ?1").bind(y).all();
   const order = new Map(SCHOOLS.map((s, i) => [s.id, i]));
   const docs = results.filter(r => members.includes(r.school)).sort((a, b) => order.get(a.school) - order.get(b.school));
-  const keys = sourcesFor(today).filter(s => s.phase === "hist" ? s.Y === y : y === Y - 1 && s.phase === "prev" && !s.reg).map(s => s.key);
+  const keys = (await allSources(env, today)).sources.filter(s => s.phase === "hist" ? s.Y === y : y === Y - 1 && s.phase === "prev" && !s.reg).map(s => s.key);
   const tag = y === Y - 1 ? "|prev" : `|y${y}`;
   const done = (await env.DB.prepare("SELECT COUNT(*) AS n FROM pages WHERE last_attempt IS NOT NULL AND instr(key, ?1) > 0").bind(tag).first())?.n || 0;
   const body = `{"year":${y},"members":${JSON.stringify(members)},"progress":${JSON.stringify({ done: Math.min(done, keys.length), total: keys.length })},"schools":[${docs.map(r => r.json).join(",")}]}`;

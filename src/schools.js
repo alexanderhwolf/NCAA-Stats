@@ -2755,6 +2755,17 @@ const TFRRS = {
 };
 for (const s of SCHOOLS) if (TFRRS[s.id]) s.tfrrs = { Men: TFRRS[s.id][0], Women: TFRRS[s.id][1] };
 
+// Schools on the WMT Digital platform: their athletics sites serve every schedule as JSON
+// (src/wmt.js). Sport ids from each site's /website-api/sports, Oct 21, 2026. Keys are our sport
+// slugs; Arizona State calls women's soccer "soccer" there.
+const WMT = {
+  byu: { tz: "America/Denver", sports: { football: 4, "womens-basketball": 5, "womens-cross-country": 6, "womens-golf": 7, "womens-gymnastics": 8, "womens-soccer": 9, softball: 10, "womens-swimming-and-diving": 11, "womens-tennis": 12, "womens-track-and-field": 13, "womens-volleyball": 14, baseball: 15, "mens-basketball": 16, "mens-cross-country": 17, "mens-golf": 18, "mens-swimming-and-diving": 19, "mens-tennis": 20, "mens-track-and-field": 21, "mens-volleyball": 22 } },
+  ucf: { tz: "America/New_York", sports: { baseball: 1, "cross-country": 4, football: 5, "mens-basketball": 6, "mens-golf": 7, "mens-soccer": 8, "mens-tennis": 9, rowing: 11, softball: 12, "track-and-field": 14, volleyball: 15, "womens-basketball": 16, "womens-golf": 17, "womens-soccer": 18, "womens-tennis": 19 } },
+  cincinnati: { tz: "America/New_York", sports: { baseball: 1, "cross-country": 2, football: 3, "mens-basketball": 4, "mens-golf": 5, "swimming-and-diving": 6, "track-field": 7, "womens-basketball": 8, "womens-golf": 9, "womens-lacrosse": 10, "womens-soccer": 11, "womens-tennis": 12, "womens-volleyball": 13, "mens-soccer": 14 } },
+  "arizona-state": { tz: "America/Phoenix", sports: { baseball: 2, "beach-volleyball": 3, "cross-country": 4, football: 5, gymnastics: 6, "ice-hockey": 7, lacrosse: 8, "mens-basketball": 9, "mens-golf": 10, "mens-tennis": 11, "womens-soccer": 12, softball: 13, "mens-swimming-diving": 15, "track-field": 17, triathlon: 18, volleyball: 19, "water-polo": 20, "womens-basketball": 21, "womens-golf": 22, "womens-tennis": 23, wrestling: 24, "womens-swimming-diving": 25 } },
+};
+for (const s of SCHOOLS) if (WMT[s.id]) { s.platform = "wmt"; s.tz = WMT[s.id].tz; s.wmtSports = WMT[s.id].sports; }
+
 // Tennis and beach volleyball are dual-match sports with a team W-L record (spring), not meets.
 for (const s of SCHOOLS) for (const sp of s.sports) if (sp.name === "Tennis" || sp.name === "Beach Volleyball") sp.kind = "h2h";
 

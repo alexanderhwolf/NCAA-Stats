@@ -16,12 +16,17 @@ Alex directs from his phone; Claude builds. Deploys run only when Alex starts th
 - `historySources()` (phase `hist`, keys `school|site|slug|y2019`): Sidearm schools read every sport from the school's text page; non-Sidearm schools use ESPN. ESPN's pre-2020 seasons are incomplete (TCU women's soccer 2016: 5 matches), so don't switch Sidearm history to ESPN.
 - Backfill only uses capacity left after cur/prev, newest season first. Season docs live in `hist_docs`; last season is assembled from `prev` pages.
 
+## Source layers
+- ESPN (major sports), Sidearm text pages (`src/sidearm.js`), TFRRS (cross country places, `src/tfrrs.js`).
+- WMT schools (BYU, UCF, Cincinnati, Arizona State): `/website-api` JSON on the school's own site (`src/wmt.js`), every sport and season, no ESPN. A per-sport season list (`|wmt|cat-<slug>|cat`) yields the season pages at run time (`wmtEventSources`).
+- ESPN's college softball/baseball schedules can be incomplete (Texas Tech softball 2026: ESPN 61 games, official 61-10). Big 12 standings (big12sports.com/standings.aspx?path=<sport>) are the official check.
+
 ## Rules
 - Plain JS ESM, no build step. Tests: `node --test`. wrangler pinned at 4.120.0; use `npm run`, not `npx wrangler`.
 - Never guess a number. If a source fails, the sport shows as unavailable and the school's `unverified` list says why.
 - Tests with synthetic fixtures are marked as such. Prefer real captures from `/probe` in `test/fixtures/`.
 - The account is on Workers Paid (30 s CPU per run). Be polite to school sites: keep `ESPN_PER_RUN` / `SITE_PER_RUN` small and the 2-per-host cap. An ESPN schedule is ~350 KB JSON (~5 ms CPU to parse); a school page ~1 ms after trimming to `<main>`.
-- `/probe` only fetches ESPN and the 16 school domains. Turn it off (`PROBE_ENABLED: "false"`) once fixtures are captured.
+- `/probe` fetches ESPN, the school domains and the candidate hosts in `src/index.js`. WebFetch mangles some probe URLs (bracketed query strings); call the probe from the browser pane instead when that happens.
 
 ## Lessons from the first manual collection (Oct 21, 2026)
 - Sidearm `/schedule/text` pages are sometimes stale vs the normal schedule page (Baylor and Colorado football, Houston soccer).
