@@ -310,13 +310,13 @@ function recordTile(s) {
   if (s.streak && !off) chips.push(`<span class="chip ${s.streak[0] === "W" ? "w" : s.streak[0] === "L" ? "l" : ""}">Streak ${esc(s.streak)}</span>`);
   if (total) chips.push(`<span class="chip">${pctStr(pct(s.w, s.l, t))} pct</span>`);
   // Checked against the Big 12's official standings (when the conference publishes them).
-  if (s.check?.agrees) chips.push(`<span class="chip ok" title="Matches the Big 12's official standings">✓ Big 12</span>`);
+  if (s.check?.agrees) chips.push(`<span class="chip ok" title="Matches the ${esc(s.check.source)}">✓ Official record</span>`);
   const meta = [];
   if (s.last && !off) meta.push(`<div><b>Last:</b> ${esc(dash(s.last.result || ""))} ${esc(oppLine(s.last))}, ${esc(fmtD(s.last.date))}</div>`);
   if (s.summary) meta.push(`<div>${esc(s.summary)}</div>`);
-  if (s.check && !s.check.agrees && s.check.ours) {
-    const shown = s.recordSource ? "showing the Big 12's" : "showing the game-by-game count, which is more recent";
-    meta.push(`<div class="flag">Sources disagree: Big 12 standings ${esc(dash(s.check.record))}, game-by-game ${esc(dash(s.check.ours))} (${shown}).</div>`);
+  if (s.check && !s.check.agrees && !s.check.behind && s.check.ours) {
+    const shown = s.recordSource ? `showing the ${s.check.source}'s` : "showing the game-by-game count, which is more recent";
+    meta.push(`<div class="flag">Sources disagree: the ${esc(s.check.source)} says ${esc(dash(s.check.record))}; the game-by-game list counts ${esc(dash(s.check.ours))} (${esc(shown)}).</div>`);
   }
   for (const p of s.pending || []) meta.push(`<div class="pend">${esc(p)}</div>`);
   if (s.next) meta.push(`<div><b>${off ? "Opens" : "Next"}:</b> ${esc(oppLine(s.next))}, ${esc(fmtD(s.next.date))}</div>`);

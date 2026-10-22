@@ -69,3 +69,19 @@ test("a past season with no game-by-game source still gets the official record",
   assert.equal(`${wt.w}-${wt.l}`, "14-6");
   assert.match(wt.notes, /Big 12 standings/);
 });
+
+test("Sidearm schools: the school's own page is the official record for ESPN sports", () => {
+  const games = [...Array(55)].map((_, i) => ({ date: `2026-03-${String(1 + (i % 28)).padStart(2, "0")}`, result: "W 5-1", opp: "Team " + i, at: "Home" }))
+    .concat([...Array(6)].map((_, i) => ({ date: "2026-04-10", result: "L 1-2", opp: "Loss " + i, at: "Away" })));
+  const rows = [
+    { key: "texas-tech|espn|softball|prev|2", url: "u", last_ok: 1, data: JSON.stringify({ events: games, teamName: "Texas Tech Red Raiders" }) },
+    { key: "texas-tech|site|softball|prev", url: "u", last_ok: 1, data: JSON.stringify({ label: "2026 Softball Schedule", record: { overall: "61-10", conf: "21-3", streak: null }, events: [] }) },
+  ];
+  const sb = assembleSchool(BY_ID["texas-tech"], rows, "2026-10-21").sports.find(s => s.name === "Softball");
+  assert.equal(`${sb.w}-${sb.l}`, "61-10");
+  assert.deepEqual(sb.check, { source: "school's schedule page", record: "61-10", conf: "21-3", ours: "55-6", agrees: false });
+  // A page that answered with another season isn't taken as this one's record.
+  rows[1].data = JSON.stringify({ label: "2027 Softball Schedule", record: { overall: "0-0", conf: null, streak: null }, events: [] });
+  const sb2 = assembleSchool(BY_ID["texas-tech"], rows, "2026-10-21").sports.find(s => s.name === "Softball");
+  assert.equal(`${sb2.w}-${sb2.l}`, "55-6");
+});

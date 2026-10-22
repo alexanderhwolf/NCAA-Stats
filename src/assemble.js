@@ -61,27 +61,45 @@ function tfrrsMerge(school, sp, data, events, Y) {
   return out.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
 }
 
-// The Big 12's official record for this sport and season (src/big12.js), checked against the
-// game-by-game count. A finished season shows the official record; in season, the standings
-// can trail the latest game, so the game-by-game count stands when it has more games. Either
-// way a disagreement is recorded in check, for the page to show.
-function reconcile(out, sp, school, data, y, live) {
-  const st = standingsFor(sp);
-  if (!st || sp.kind !== "h2h") return out;
-  const row = data(`conf|b12|${st.path}|y${y}`)?.rows?.find(r => r.school === school.name);
-  const off = row && recParts(row.overall);
+// The official record for this sport and season, checked against the game-by-game count:
+//   - Sidearm schools' ESPN sports: the school's own schedule page states its official record
+//     (ESPN's lists can miss games: Texas Tech softball 2025-26, ESPN 55-6, official 61-10).
+//   - Big 12 standings, when stored (the conference site currently refuses the Worker, so the
+//     standings sources are off; see B12_ENABLED in src/sources.js).
+// A finished season shows the official record; in season the official source can trail the
+// latest game, so the game-by-game count stands when it has more games. Either way a
+// disagreement is kept in check for the page to show.
+function applyOfficial(out, overall, conf, source, live) {
+  const off = recParts(overall);
   if (!off) return out;
   const str = r => `${r.w}-${r.l}${r.t ? "-" + r.t : ""}`;
   const ours = Number.isFinite(out.w) && Number.isFinite(out.l) ? { w: out.w, l: out.l, t: out.t || 0 } : null;
   const agrees = !!ours && str(ours) === str(off);
-  out.check = { source: "Big 12 standings", record: str(off), conf: row.conf || null, ours: ours ? str(ours) : null, agrees };
+  out.check = { source, record: str(off), conf: conf || null, ours: ours ? str(ours) : null, agrees };
   if (agrees) return out;
+  // In season, an official source with fewer games is just behind (school text pages can lag a
+  // game or two); that's not a disagreement worth flagging.
+  if (live && ours && off.w + off.l + off.t < ours.w + ours.l + ours.t) { out.check.behind = true; return out; }
   if (!live || !ours || off.w + off.l + off.t >= ours.w + ours.l + ours.t) {
-    Object.assign(out, { w: off.w, l: off.l, t: off.t, recordSource: "Big 12 standings" });
-    if (row.conf) out.conf = row.conf;
-    if (!ours) out.notes = "Record from the Big 12 standings; game-by-game results aren't available.";
+    Object.assign(out, { w: off.w, l: off.l, t: off.t, recordSource: source });
+    if (conf) out.conf = conf;
+    if (!ours) out.notes = `Record from the ${source}; game-by-game results aren't available.`;
   }
   return out;
+}
+
+function reconcile(out, sp, school, data, y, live, Ycur) {
+  if (sp.kind !== "h2h") return out;
+  if (school.platform === "sidearm" && sp.layer === "espn" && y >= Ycur - 1) {
+    const page = data(`${school.id}|site|${sp.slug}|${y === Ycur ? "cur" : "prev"}`);
+    const season = sidearmSeason(family(sp), y);
+    if (page?.record?.overall && !(namesSeason(page.label) && !page.label.includes(season))) {
+      return applyOfficial(out, page.record.overall, page.record.conf, "school's schedule page", live);
+    }
+  }
+  const st = standingsFor(sp);
+  const row = st && data(`conf|b12|${st.path}|y${y}`)?.rows?.find(r => r.school === school.name);
+  return row ? applyOfficial(out, row.overall, row.conf, "Big 12 standings", live) : out;
 }
 
 const letter = r => (r && /^[WLT]\b/.test(r) ? r[0] : null);
@@ -269,7 +287,7 @@ export function assembleSchool(school, rows, today) {
     const sp = school.sports.find(x => x.slug === out.slug && x.name === out.name && x.g === out.g);
     if (!sp) continue;
     const y = out.status === "in" || out.season === sidearmSeason(family(sp), Y) ? Y : Y - 1;
-    reconcile(out, sp, school, data, y, out.status === "in");
+    reconcile(out, sp, school, data, y, out.status === "in", Y);
   }
   const okTimes = rows.map(r => r.last_ok).filter(Boolean);
   const seen = new Set();
@@ -329,7 +347,7 @@ export function assembleSeason(school, rows, y, Ycur, today) {
         : bad?.last_status === 404 ? `no schedule page for ${sideSeason} (the program may not have existed then)`
         : bad ? `source failing (${bad.last_error})` : "not fetched yet";
       unverified.push(`${label}: ${why}`);
-      sports.push(reconcile({ ...shape(sp, { finishes: [] }, "final", season, url), w: null, l: null, notes: why === "not fetched yet" ? "Still collecting this season." : "Not available for this season." }, sp, school, data, y, false));
+      sports.push(reconcile({ ...shape(sp, { finishes: [] }, "final", season, url), w: null, l: null, notes: why === "not fetched yet" ? "Still collecting this season." : "Not available for this season." }, sp, school, data, y, false, Ycur));
       continue;
     }
     const sm = summarize(sp, d.events, d.record, today);
@@ -337,7 +355,7 @@ export function assembleSeason(school, rows, y, Ycur, today) {
     if (sp.kind === "h2h" && !sm.hasResults) {
       Object.assign(out, { w: null, l: null, t: null, conf: null, notes: "No results posted for this season." });
     }
-    sports.push(reconcile(out, sp, school, data, y, false));
+    sports.push(reconcile(out, sp, school, data, y, false, Ycur));
   }
   const okTimes = rows.map(r => r.last_ok).filter(Boolean);
   return {

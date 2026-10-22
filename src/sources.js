@@ -8,6 +8,7 @@ import { STANDINGS, B12_HOST, standingsSeasonMatches } from "./big12.js";
 import { apiSportFor } from "./sidearmApi.js";
 import { family, startYear, sidearmSeason, espnSeason, addDays } from "./season.js";
 
+export const B12_ENABLED = false;
 export const TTL_CUR_MIN = 180;          // current season: every 3 hours
 export const TTL_PREV_MIN = 7 * 24 * 60; // finished season: weekly is plenty
 export const TTL_CAT_MIN = 7 * 24 * 60;  // a WMT sport's list of seasons: weekly
@@ -36,6 +37,12 @@ export function sourcesFor(today) {
       for (const [phase, y] of [["cur", Y], ["prev", Y - 1]]) {
         if (!memberIn(s, y)) continue;
         const ttl = phase === "cur" ? TTL_CUR_MIN : TTL_PREV_MIN;
+        // Sidearm schools' ESPN sports: the school's own page too, for its official record.
+        if (sp.layer === "espn" && s.platform === "sidearm" && !seenSlug.has(sp.slug + phase)) {
+          seenSlug.add(sp.slug + phase);
+          out.push({ key: `${s.id}|site|${sp.slug}|${phase}`, school: s.id, layer: "site", ref: sp.slug, phase, ttl,
+            url: `https://${s.domain}/sports/${sp.slug}/schedule/text/${sidearmSeason(fam, y)}`, Y: y, fam });
+        }
         if (sp.layer === "espn") {
           const teamId = espnTeamId(s, sp.espn);
           if (!teamId) continue;
@@ -81,7 +88,10 @@ export function sourcesFor(today) {
       url: `https://${s.domain}/api/v2/Sports`, Y, fam: "academic" });
   }
   // Big 12 standings: one season list per sport; the season pages come from it at run time.
-  for (const st of STANDINGS) {
+  // Off: big12sports.com answers the Worker with an endless redirect (a filter on automated
+  // requests), and we don't disguise the Worker as a browser. Official records come from the
+  // schools' own pages instead (reconcile in assemble.js).
+  for (const st of B12_ENABLED ? STANDINGS : []) {
     out.push({ key: `conf|b12|${st.path}|cat`, school: "conf", layer: "site", ref: st.path, phase: "cat", ttl: TTL_CAT_MIN, conf: "catalog",
       url: `https://${B12_HOST}${st.url}`, Y, fam: family(st) });
   }
